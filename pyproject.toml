@@ -8,6 +8,7 @@ dependencies = [
     "jax>=0.8.0",
     "numba>=0.62.1",
     "numpy>=2.3.4",
+    "scikit-learn>=1.7.2",
     "scipy>=1.16.3",
 ]
 

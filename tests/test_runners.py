@@ -18,19 +18,13 @@ def ridge_model(X, y, lam=1.0):
     p = X.shape[1]
     eye = np.eye(p)
 
-    np.linalg.solve(X.T @ X + lam * eye, X.T @ y)
-    beta = np.linalg.inv(X.T @ X + lam * eye) @ X.T @ y
+    beta = np.linalg.solve(X.T @ X + lam * eye, X.T @ y)
     return beta
 
 
 def test_runner():
     # runner = SimRunner(ols_data, ridge_model, {"Ridge": {"lam": 0.1}})
     N_sims = 10
-    N = 100
-    p = 10
-
-    X, y, beta = ols_data(N, p)
-    beta_coeffs = ridge_model(X, y, lam=0.1)
 
     Runner = SimRunner(
         data_generator=ols_data,
@@ -39,10 +33,9 @@ def test_runner():
             "Linear Data": {"N": [50, 100], "p": [5, 10, 20]},
             "Ridge": {"lam": [0.1, 0.5, 1.0, 1.5]},
         },
-        combinations="all",
     )
 
-    results = list(Runner(N_sims))
+    results = Runner.run_simulations(N_sims)
     assert len(results) == 2 * 3 * 4
     # TODO: come up with better tests here to make sure I have the right
     # scenarios

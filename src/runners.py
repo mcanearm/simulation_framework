@@ -1,18 +1,22 @@
 from src.decorators import MetadataWrapper
-from functools import partial, update_wrapper
-from itertools import product
 import inspect
-from collections import namedtuple
-import numpy as np
+from sklearn.model_selection import ParameterGrid
 
 
 class SimRunner(object):
+    """
+    This is the initial attempt at a simulation runner, but it already feels too heavy. The data generation should
+    probably be completely separate from the actual running of the data. In fact, I think we want an entire class dedicated
+    to data generation, and one for running the models on various scenarios. The scenarios can be loaded from disk using a
+    dictionary like interface.
+    """
+
     def __init__(
         self,
         data_generator: MetadataWrapper,
         method: MetadataWrapper,
-        sim_params: dict[str, dict[str, object]],
-        combinations: str = "all",
+        sim_params: dict[str, dict[str, object]] = None,
+        scenarios=None,
     ):
         self.data_generator = data_generator
         self.method = method
@@ -22,40 +26,65 @@ class SimRunner(object):
         )
         assert isinstance(method, MetadataWrapper), "Method must use the Model class."
 
-        self.method_params = sim_params.get(method.label)
-        self.data_gen_params = sim_params.get(data_generator.label)
-
-        if True:
-            # if combinations == "all":
-            self.key_order = (*self.data_gen_params, *self.method_params)
-            scenario_class = namedtuple("scenario", self.key_order)
-            self.scenarios = [
-                scenario_class(*args)
-                for args in product(
-                    *self.data_gen_params.values(), *self.method_params.values()
-                )
-            ]
-
-    def __call__(self, N_sims, parallel=False):
-        for scenario in self.scenarios:
-            generator_params = {
-                k: v for k, v in scenario._asdict().items() if k in self.data_gen_params
+        if sim_params:
+            self.method_params = {
+                f"__{method.label}_{k}": v
+                for k, v in sim_params.get(method.label, {}).items()
             }
-            method_params = {
-                k: v for k, v in scenario._asdict().items() if k in self.method_params
+            self.data_gen_params = {
+                f"__{data_generator.label}_{k}": v
+                for k, v in sim_params.get(data_generator.label, {}).items()
             }
 
-            scenario_result = []
-            for _ in range(N_sims):
-                data = self.data_generator(**generator_params)
+            # for now, only support factorial designs
+            full_parameter_set = {**self.method_params, **self.data_gen_params}
+            self.all_scenarios = ParameterGrid(full_parameter_set)
+        elif scenarios:
+            self.all_scenarios = scenarios
+        else:
+            assert False, "Must provide either sim_params or scenarios."
 
-                # How to ensure that the data generator passes in the correct values
-                # to the modelling function (in an arbitrary way)
-                method_signature = inspect.signature(self.method)
-                for param in data._asdict():
-                    if param in method_signature.parameters:
-                        method_params[param] = data._asdict()[param]
-                result = self.method(**method_params)
-                scenario_result.append(result)
-            scenario_result = np.stack(scenario_result)
-            yield scenario_result
+        # TODO: Add a filesystem backed dictionary where we will store the results
+        # of data generating processes for each scenario
+        self.filesystem_backed_dictionary = None
+
+    def _parse_scenario_args(self, scenario):
+        dgp_args = {
+            k.replace(param_lab, ""): v
+            for k, v in scenario.items()
+            if k.startswith(param_lab := f"__{self.data_generator.label}_")
+        }
+        method_args = {
+            k.replace(param_lab, ""): v
+            for k, v in scenario.items()
+            if k.startswith(param_lab := f"__{self.method.label}_")
+        }
+        return dgp_args, method_args
+
+    def generate_data(self, scenario, N_sims):
+        dgp_args, _ = self._parse_scenario_args(scenario)
+        sim_data = self.data_generator(**dgp_args)
+        return sim_data
+
+    def _run_scenario(self, scenario, N_sims):
+        dgp_args, method_args = self._parse_scenario_args(scenario)
+
+        # TODO: the problem here is that I want to re-use the data that I generate
+        # for multiple methods. So theoretically, all the data generation should happen
+        # first and outside of this function, and then it should get passed into the method
+        # bits
+        for i in range(N_sims):
+            sim_data = self.data_generator(**dgp_args)
+
+            shared_params = set(sim_data._fields).intersection(
+                inspect.signature(self.method.fn).parameters
+            )
+
+            method_inputs = {k: sim_data.__getattribute__(k) for k in shared_params}
+
+            method_output = self.method(**method_inputs, **method_args)
+
+            return method_output
+
+    def run_simulations(self, N_sims=10, parallel=False):
+        return [self._run_scenario(scenario, N_sims) for scenario in self.all_scenarios]

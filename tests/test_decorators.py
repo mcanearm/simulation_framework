@@ -21,7 +21,7 @@ def test_rnorm(rnorm):
 
     samples = rnorm(n)
     assert len(samples) == n
-    assert rnorm.name == "rnorm"
+    assert rnorm.label == "rnorm"
 
 
 def test_docstring_preservation(rnorm):
