@@ -14,5 +14,6 @@ dependencies = [
 
 [project.optional-dependencies]
 testing = [
+    "pygments>=2.19.2",
     "pytest>=9.0.1",
 ]

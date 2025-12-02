@@ -1,6 +1,7 @@
 import numpy as np
 from src.runners import SimRunner
 from src.decorators import data_generator, model
+from collections import namedtuple
 
 rng = np.random.default_rng(20250607)
 
@@ -20,6 +21,15 @@ def ridge_model(X, y, lam=1.0):
 
     beta = np.linalg.solve(X.T @ X + lam * eye, X.T @ y)
     return beta
+
+
+def test_generator():
+    output_tuple = ols_data(N=100, p=10)
+    assert output_tuple.X.shape == (100, 10)
+    assert output_tuple.y.shape == (100,)
+    assert output_tuple.beta.shape == (10,)
+
+    assert isinstance(output_tuple, tuple)
 
 
 def test_runner():

@@ -379,6 +379,7 @@ dependencies = [
 
 [package.optional-dependencies]
 testing = [
+    { name = "pygments" },
     { name = "pytest" },
 ]
 
@@ -387,6 +388,7 @@ requires-dist = [
     { name = "jax", specifier = ">=0.8.0" },
     { name = "numba", specifier = ">=0.62.1" },
     { name = "numpy", specifier = ">=2.3.4" },
+    { name = "pygments", marker = "extra == 'testing'", specifier = ">=2.19.2" },
     { name = "pytest", marker = "extra == 'testing'", specifier = ">=9.0.1" },
     { name = "scikit-learn", specifier = ">=1.7.2" },
     { name = "scipy", specifier = ">=1.16.3" },
