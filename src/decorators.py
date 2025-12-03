@@ -1,6 +1,5 @@
 from typing import Callable
 from functools import update_wrapper
-import inspect
 from collections import namedtuple
 
 

@@ -1,6 +1,9 @@
 from src.decorators import MetadataWrapper
 import inspect
 from sklearn.model_selection import ParameterGrid
+from concurrent.futures import as_completed, ThreadPoolExecutor, ProcessPoolExecutor
+from functools import partial
+import numpy as np
 
 
 class SimRunner(object):
@@ -88,3 +91,41 @@ class SimRunner(object):
 
     def run_simulations(self, N_sims=10, parallel=False):
         return [self._run_scenario(scenario, N_sims) for scenario in self.all_scenarios]
+
+
+def pool_function(
+    fn,
+    ncores=1,
+    nsims=100,
+    pool_type="thread",
+    *args,
+    **kwargs,
+):
+    """
+    Run a function, pooled, using concurrent futures.
+    """
+
+    if ncores > 1:
+        pool_class = (
+            ThreadPoolExecutor if pool_type == "thread" else ProcessPoolExecutor
+        )
+
+        spawn_seeds = np.random.default_rng().spawn(ncores)
+
+        with pool_class(max_workers=ncores) as executor:
+            futures = {executor.submit(fn, *args, **kwargs) for _ in range(nsims)}
+            results = [i.result() for i in as_completed(futures)]
+    else:
+        results = [fn(*args, **kwargs) for _ in range(nsims)]
+
+    return results
+
+
+def simple_pool_fn(x):
+    return x**2 + np.random.normal(0, 1)
+
+
+if __name__ == "__main__":
+    pool_function(
+        simple_pool_fn, ncores=4, nsims=10, pool_type="process", x=np.arange(1000)
+    )
