@@ -33,5 +33,3 @@ def test_runner():
     n_sims = 5
 
     simulation_output = run_methods(key, dgp=linear_data, method=ridge, n_sims=n_sims)
-
-def 

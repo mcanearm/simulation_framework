@@ -7,6 +7,11 @@ from src.constants import VALID_KEY_NAMES
 import textwrap
 
 
+@pytest.fixture
+def key():
+    return jax.random.PRNGKey(0)
+
+
 @method(output="beta", label="Ridge")
 def ridge(X, y):
     """
@@ -18,7 +23,7 @@ def ridge(X, y):
     return beta_hat
 
 
-@dgp(output=["X"], label="normal")
+@dgp(output="X", label="normal")
 def norm_data(prng_key, n=100, p=10):
     """
     test docstring
@@ -27,8 +32,7 @@ def norm_data(prng_key, n=100, p=10):
     return X
 
 
-def test_dgp():
-    key = jax.random.PRNGKey(0)
+def test_dgp(key):
     samples = norm_data(key, n=10, p=5)
     assert samples.shape == (10, 5)
     assert norm_data.label == "normal"
@@ -40,10 +44,16 @@ def test_docstring_preservation(fn):
     assert tmp == "test docstring"
 
 
-def test_vmappable():
-    key = jax.random.key(22)
+def test_vmappable(key):
     key_array = jax.random.split(key, 5)
-    assert jax.vmap(norm_data)(key_array).shape == (5, 100, 10)
+    assert jax.vmap(norm_data, in_axes=(0,))(key_array).shape == (5, 100, 10)
+
+
+def test_jitable(key):
+    # you can't change the n or p, since shapes are really important for jit compilation I suppose. But this
+    # is a JAX thing, not our package, and you can at least JIT any DGP function
+    simple_norm = jax.jit(norm_data, static_argnames=("n", "p"))
+    assert simple_norm(key, n=10, p=3) is not None
 
 
 def test_wrong_key_name():
