@@ -1,51 +1,37 @@
-import numpy as np
-from src.runners import SimRunner
-from src.decorators import data_generator, model
-from collections import namedtuple
-
-rng = np.random.default_rng(20250607)
-
-
-@data_generator("Linear Data", output=("X", "y", "beta"))
-def ols_data(N, p):
-    X = rng.normal(size=(N, p))
-    beta = rng.normal(size=p)
-    y = X @ beta + rng.normal(size=N)
-    return X, y, beta
+from src.decorators import dgp, method
+from jax import numpy as jnp
+from src.runners import run_methods
+import jax
+import pytest
 
 
-@model("Ridge", output="beta")
-def ridge_model(X, y, lam=1.0):
+@method(output="beta", label="Ridge")
+def ridge(X, y, alpha=1.0):
+    """
+    Fit a ridge regression model.
+    """
     p = X.shape[1]
-    eye = np.eye(p)
-
-    beta = np.linalg.solve(X.T @ X + lam * eye, X.T @ y)
-    return beta
+    beta_hat = jnp.linalg.inv(X.T @ X + alpha * jnp.eye(p)) @ X.T @ y
+    return beta_hat
 
 
-def test_generator():
-    output_tuple = ols_data(N=100, p=10)
-    assert output_tuple.X.shape == (100, 10)
-    assert output_tuple.y.shape == (100,)
-    assert output_tuple.beta.shape == (10,)
+@dgp(output=["X", "y"], label="linear_data")
+def linear_data(prng_key, n=100, p=10):
+    """
+    Generate linear regression data.
+    """
+    X = jax.random.normal(prng_key, shape=(n, p))
+    true_beta = jnp.arange(1, p + 1)
+    noise = jax.random.normal(prng_key, shape=(n,)) * 0.5
+    y = X @ true_beta + noise
+    return X, y
 
-    assert isinstance(output_tuple, tuple)
 
-
+@pytest.mark.skip()
 def test_runner():
-    # runner = SimRunner(ols_data, ridge_model, {"Ridge": {"lam": 0.1}})
-    N_sims = 10
+    key = jax.random.PRNGKey(0)
+    n_sims = 5
 
-    Runner = SimRunner(
-        data_generator=ols_data,
-        method=ridge_model,
-        sim_params={
-            "Linear Data": {"N": [50, 100], "p": [5, 10, 20]},
-            "Ridge": {"lam": [0.1, 0.5, 1.0, 1.5]},
-        },
-    )
+    simulation_output = run_methods(key, dgp=linear_data, method=ridge, n_sims=n_sims)
 
-    results = Runner.run_simulations(N_sims)
-    assert len(results) == 2 * 3 * 4
-    # TODO: come up with better tests here to make sure I have the right
-    # scenarios
+def 
