@@ -19,3 +19,7 @@ testing = [
     "pygments>=2.19.2",
     "pytest>=9.0.1",
 ]
+dev = [
+    "pytest>=9.0.1",
+    "ruff>=0.14.8",
+]

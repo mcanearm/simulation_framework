@@ -48,60 +48,6 @@ class DiskDict(MutableMapping):
     def __len__(self) -> int:
         return len(list(self.data_dir.glob("*.pkl")))
 
-    # if isinstance(self.data_dir, Path):
-    #         filename, argdict = self.__generate_filename(*args, **kwargs)
-    #         filepath = self.data_dir / filename  # type: ignore
-    #         if filepath.exists():
-    #             # load data
-    #             with open(filepath, "rb") as f:
-    #                 result = dill.load(f)
-    #             self._cache_hits += 1
-    #             self._last_call = {
-    #                 **argdict,
-    #                 "filepath": filepath,
-    #             }
-    #         else:
-    #             result = self.fn(*args, **kwargs)
-    #             with open(filepath, "wb") as f:
-    #                 dill.dump(result, f)
-    #             self._last_call = {**argdict, "filepath": filepath}
-    #     else:
-    #         # if no data directory, just call the function and exit
-
-
-# def __generate_filename(self, *args, **kwargs):
-#         bound = self.sig.bind(*args, **kwargs)
-#         bound.apply_defaults()
-#         argdict = dict(bound.arguments)
-#         key_hash = None
-#         if False:  # self._key_param_name or self._key_param_name in argdict:
-#             key_value = argdict.pop(self._key_param_name)
-#             key_hash = hashkey(key_value)
-#             param_based_path = "_".join(
-#                 [f"{k}={v}" for k, v in argdict.items() if not isinstance(v, Array)]
-#             )
-#         else:
-#             param_based_path = "_".join(
-#                 [f"{k}={v}" for k, v in argdict.items() if not isinstance(v, Array)]
-#             )
-#         param_path = f"{param_based_path}" if key_hash else param_based_path
-
-#         return f"{self.label}_{self._role}_{param_path}.pkl", argdict
-
-
-def get_arg_combinations(params):
-    """
-    Given a dict of lists pairing, return all combinations of the method with the parameter grid.
-    """
-    return [
-        {k: v for k, v in zip(params.keys(), param_combination)}
-        for param_combination in product(*params.values())
-    ]
-
-
-# NOTE: Starting point of directory structure is the hash of the starting jax key
-# prior to splitting
-
 
 def simulation_grid(
     dgps: tuple[DGP, dict] | list[tuple[DGP, dict]],
