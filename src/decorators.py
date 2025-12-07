@@ -1,6 +1,11 @@
 from functools import update_wrapper
 import inspect
 from src.constants import VALID_KEY_NAMES
+from pathlib import Path
+import dill
+from jaxtyping import Array, PRNGKeyArray
+import numpy as np
+import hashlib
 from collections import namedtuple
 
 
@@ -9,17 +14,31 @@ class MetadataCaller(object):
         self.fn = fn
         self.label = label
         self.output = output
-        self.output_class = (
-            namedtuple(label, output) if len(output) > 1 else lambda x: x
-        )
 
         update_wrapper(self, fn)
+        self._role = "MetadataCaller"
+        self.sig = inspect.signature(fn)
+
+        if set(self.sig.parameters.keys()).intersection(VALID_KEY_NAMES):
+            first_item = list(self.sig.parameters.keys())[0]
+            if first_item in VALID_KEY_NAMES:
+                self._key_param_name = first_item
+                self._requires_key = True
+            else:
+                raise ValueError(
+                    f"Key argument in function signature is not valid. The FIRST function argument must be one of {VALID_KEY_NAMES}."
+                )
+        else:
+            self._key_param_name = None
+            self._requires_key = False
+
+        # self.output_class = namedtuple(self.label, self.output)
+        self.sig = inspect.signature(fn)
 
     def __call__(self, *args, **kwargs):
-        if not isinstance(self.output, (list, tuple)):
-            return self.output_class(self.fn(*args, **kwargs))
-        else:
-            return self.output_class(*self.fn(*args, **kwargs))
+        # if a data directory is provided, assume it was provided to save/load data
+        result = self.fn(*args, **kwargs)
+        return result
 
 
 class DGP(MetadataCaller):
@@ -47,6 +66,7 @@ def dgp(output, label=None):
         sig = inspect.signature(fn)
         params = sig.parameters
 
+        # ensures that the first argument is a valid key name; required for data generating processes
         first_item = list(params.keys())[0]
         if first_item not in VALID_KEY_NAMES:
             raise ValueError(

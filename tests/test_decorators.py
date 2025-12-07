@@ -5,6 +5,7 @@ import jax
 import inspect
 from src.constants import VALID_KEY_NAMES
 import textwrap
+from src.utils import simulation_grid
 
 
 @pytest.fixture
@@ -74,3 +75,7 @@ def test_right_key_wrong_place(deco_class, valid_key_name):
             return jnp.zeros((n, 1))
         """
         exec(textwrap.dedent(my_fn))
+
+
+def test_grid_call(key):
+    pass
