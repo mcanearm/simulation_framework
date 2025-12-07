@@ -16,7 +16,6 @@ class MetadataCaller(object):
         self.output = output
 
         update_wrapper(self, fn)
-        self._role = "MetadataCaller"
         self.sig = inspect.signature(fn)
 
         if set(self.sig.parameters.keys()).intersection(VALID_KEY_NAMES):
