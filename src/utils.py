@@ -49,6 +49,16 @@ class DiskDict(MutableMapping):
         return len(list(self.data_dir.glob("*.pkl")))
 
 
+def get_arg_combinations(params):
+    """
+    Given a dict of lists pairing, return all combinations of the method with the parameter grid.
+    """
+    return [
+        {k: v for k, v in zip(params.keys(), param_combination)}
+        for param_combination in product(*params.values())
+    ]
+
+
 def simulation_grid(
     dgps: tuple[DGP, dict] | list[tuple[DGP, dict]],
     methods: tuple[Method, dict] | list[tuple[Method, dict]],
