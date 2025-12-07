@@ -1,55 +1,104 @@
-from typing import Callable
-from functools import update_wrapper
+import hashlib
+import inspect
 from collections import namedtuple
+from functools import update_wrapper
+from pathlib import Path
+
+import dill
+import numpy as np
+from jaxtyping import Array, PRNGKeyArray
+
+from src.constants import VALID_KEY_NAMES
 
 
-class MetadataWrapper(object):
-    """
-    This wrapper turns a normal function into a callable that provides an output class, which we implement
-    strictly as a named tuple based on the wrapper label.
-    """
-
-    def __init__(self, fn: Callable, label: str, output=None):
+class MetadataCaller(object):
+    def __init__(self, fn, label, output):
         self.fn = fn
-        update_wrapper(self, fn)
-        self.__wrapped__ = fn
-        self.output_class = (
-            namedtuple(f"{label.replace(' ', '')}", output) if output else None
-        )
         self.label = label
+        self.output = output
+
+        update_wrapper(self, fn)
+        self.sig = inspect.signature(fn)
+
+        if set(self.sig.parameters.keys()).intersection(VALID_KEY_NAMES):
+            first_item = list(self.sig.parameters.keys())[0]
+            if first_item in VALID_KEY_NAMES:
+                self._key_param_name = first_item
+                self._requires_key = True
+            else:
+                raise ValueError(
+                    f"Key argument in function signature is not valid. The FIRST function argument must be one of {VALID_KEY_NAMES}."
+                )
+        else:
+            self._key_param_name = None
+            self._requires_key = False
+
+        # self.output_class = namedtuple(self.label, self.output)
+        self.sig = inspect.signature(fn)
 
     def __call__(self, *args, **kwargs):
-        function_output = self.fn(*args, **kwargs)
-        if isinstance(function_output, tuple) and self.output_class:
-            return self.output_class(*function_output)
-        elif self.output_class:
-            return self.output_class(function_output)
-        else:
-            return function_output
+        # if a data directory is provided, assume it was provided to save/load data
+        result = self.fn(*args, **kwargs)
+        return result
 
 
-# DataGeneratorClass
-"""
-Data generator class comes from a decorator that returns a callable object that; this callable takes the outputs
-of the normal data generating process BUT returns a file system backed dictionary of the stored data.
-"""
+class DGP(MetadataCaller):
+    def __init__(self, fn, label, output):
+        super().__init__(fn, label, output)
+        self._role = "DGP"
 
 
-def _callable_wrap(label, output=None):
-    def outer(fn: Callable) -> MetadataWrapper:
-        return MetadataWrapper(fn, label, output)
+class Method(MetadataCaller):
+    def __init__(self, fn, label, output):
+        super().__init__(fn, label, output)
+        self._role = "Method"
+
+
+def dgp(output, label=None):
+    """
+    Small decorator to enforce JAX-style generator contract for simulation studies. Exists to do two things:
+    1) Mark the function as a DGP (with a relevant label for future steps)
+    2) Ensure the first argument is a PRNG key
+
+    Valid key parameter names are listed in VALID_KEY_NAMES in src/constants.py
+    """
+
+    def outer(fn):
+        sig = inspect.signature(fn)
+        params = sig.parameters
+
+        # ensures that the first argument is a valid key name; required for data generating processes
+        first_item = list(params.keys())[0]
+        if first_item not in VALID_KEY_NAMES:
+            raise ValueError(
+                f"Key argument in function signature is not valid. The FIRST function argument must be one of {VALID_KEY_NAMES}."
+            )
+        inner_label = label or fn.__name__
+
+        return DGP(fn=fn, label=inner_label, output=output)
 
     return outer
 
 
-"""
-Next, the model class needs to take an input dictionary of the scenarios with the data, but again, this input is 
-a Filesystem backed dictionary. The model will then take the data from each input scenario and apply the models
-to it, identified by the label and parameters. 
-"""
-# The "model" class should take a general "output" structure from a data generating
-# process and tie it directly to its inputs. Then, the final outputs should have an Xarray
-# output that includes the input parameters as a long array that created it...
+def method(output, label=None):
+    """
+    Enforce a method contract for simulation studies. Needs to take the output of a DGP as input
+    """
 
+    # Slightly different; if the prngkey is an argument, it MUST be first. However,
+    # it is not required.
 
-model = data_generator = _callable_wrap
+    def outer(fn):
+        sig = inspect.signature(fn)
+
+        if set(sig.parameters.keys()).intersection(VALID_KEY_NAMES):
+            first_item = list(sig.parameters.keys())[0]
+            if first_item not in VALID_KEY_NAMES:
+                raise ValueError(
+                    f"Key argument in function signature is not valid. The FIRST function argument must be one of {VALID_KEY_NAMES}."
+                )
+
+        inner_label = label or fn.__name__
+        return Method(fn=fn, label=inner_label, output=output)
+
+    return outer
