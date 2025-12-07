@@ -7,7 +7,6 @@ from jax import numpy as jnp
 
 from src.constants import VALID_KEY_NAMES
 from src.decorators import dgp, method
-from src.utils import simulation_grid
 from tests.conftest import norm_data, ridge
 
 
