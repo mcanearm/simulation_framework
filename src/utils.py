@@ -1,10 +1,19 @@
-from time import time
-from pathlib import Path
-from src.decorators import DGP, Method
-from itertools import product
-from collections import namedtuple
 from collections.abc import MutableMapping
+from dataclasses import dataclass
+from itertools import product
+from pathlib import Path
+from time import time
+from typing import Union
+
 import dill
+from jaxtyping import PRNGKeyArray
+
+from src.decorators import DGP, Method
+
+
+def key_to_str(key: PRNGKeyArray) -> str:
+    key_param = "-".join([str(i) for i in key.tolist()])
+    return f"key={key_param}"
 
 
 class function_timer(object):
@@ -21,6 +30,7 @@ class DiskDict(MutableMapping):
     def __init__(self, data_dir, allow_cache=True):
         super().__init__()
         self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
 
     def __getitem__(self, key):
         filepath = self.data_dir / f"{key}.pkl"
@@ -59,6 +69,36 @@ def get_arg_combinations(params):
     ]
 
 
+class Scenario(object):
+    def __init__(self, fn: Union[Method, DGP], param_set):
+        self.fn = fn
+        self.param_set = param_set
+
+    @property
+    def filename(self):
+        return f"{self.simkey}.pkl"
+
+    @property
+    def simkey(self):
+        param_str = "_".join([f"{k}={v}" for k, v in self.param_set.items()])
+        return f"{self.fn.label}_{param_str}"
+
+    def __repr__(self):
+        return f"Scenario(fn={self.fn.label}, params={self.param_set})"
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __iter__(self):
+        yield from [self.fn, self.param_set]
+
+
+@dataclass
+class SimulationScenario(object):
+    dgp: list[Scenario]
+    method: list[Scenario]
+
+
 def simulation_grid(
     dgps: tuple[DGP, dict] | list[tuple[DGP, dict]],
     methods: tuple[Method, dict] | list[tuple[Method, dict]],
@@ -72,10 +112,13 @@ def simulation_grid(
     if isinstance(methods, tuple):
         methods = [methods]
 
-    dgp_kwarg_sets = [(dgp, get_arg_combinations(params)) for dgp, params in dgps]
-    method_kwarg_sets = [
-        (method, get_arg_combinations(params)) for method, params in methods
+    fn_calls = [
+        [
+            Scenario(method, param_set)
+            for method, params in fn_set
+            for param_set in get_arg_combinations(params)
+        ]
+        for fn_set in [dgps, methods]
     ]
-    output_class = namedtuple("SimulationScenario", ["dgp", "method"])
 
-    return output_class(dgp_kwarg_sets, method_kwarg_sets)
+    return SimulationScenario(*fn_calls)

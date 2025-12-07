@@ -1,9 +1,10 @@
-from src.utils import function_timer, DiskDict, simulation_grid
-from tests.conftest import norm_data, ridge, ols
-from src.decorators import dgp
+import dill
 import jax
 from jax import numpy as jnp
-import dill
+
+from src.decorators import dgp
+from src.utils import DiskDict, function_timer, key_to_str, simulation_grid
+from tests.conftest import norm_data, ols, ridge
 
 
 @dgp(output=["X", "y", "beta"])
@@ -27,8 +28,8 @@ def test_simulation_grid():
         methods=[(ridge, {"alpha": [0.1, 1.0]}), (ols, {})],
     )
 
-    assert len(scenarios.dgp[0][1]) == 4  # test 4 parameter combos
-    assert len(scenarios.method) == 2  # test 2 methods output
+    assert len(scenarios.dgp) == 4  # test 4 parameter combos
+    assert len(scenarios.method) == 3  # one for OLS, two for ridge
 
 
 def test_dict_saving(tmpdir):
@@ -59,3 +60,7 @@ def test_dgp_saving(tmpdir):
     assert jnp.array_equal(loaded["X"], X)
     assert jnp.array_equal(loaded["y"], y)
     assert jnp.array_equal(loaded["beta"], beta)
+
+
+def test_key_str(key):
+    assert key_to_str(key) == "key=0-0"

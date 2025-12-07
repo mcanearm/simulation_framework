@@ -1,10 +1,12 @@
-import pytest
-from src.decorators import dgp, method
-from jax import numpy as jnp
-import jax
 import inspect
-from src.constants import VALID_KEY_NAMES
 import textwrap
+
+import jax
+import pytest
+from jax import numpy as jnp
+
+from src.constants import VALID_KEY_NAMES
+from src.decorators import dgp, method
 from src.utils import simulation_grid
 from tests.conftest import norm_data, ridge
 

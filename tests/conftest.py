@@ -1,7 +1,8 @@
-import pytest
 import jax
+import pytest
 from jax import numpy as jnp
-from src.decorators import method, dgp
+
+from src.decorators import dgp, method
 
 
 @pytest.fixture

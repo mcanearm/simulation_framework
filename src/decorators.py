@@ -1,12 +1,14 @@
-from functools import update_wrapper
-import inspect
-from src.constants import VALID_KEY_NAMES
-from pathlib import Path
-import dill
-from jaxtyping import Array, PRNGKeyArray
-import numpy as np
 import hashlib
+import inspect
 from collections import namedtuple
+from functools import update_wrapper
+from pathlib import Path
+
+import dill
+import numpy as np
+from jaxtyping import Array, PRNGKeyArray
+
+from src.constants import VALID_KEY_NAMES
 
 
 class MetadataCaller(object):
@@ -58,7 +60,7 @@ def dgp(output, label=None):
     1) Mark the function as a DGP (with a relevant label for future steps)
     2) Ensure the first argument is a PRNG key
 
-    Valid key parameter names are: "key", "rng_key", "prng_key", "PRNGKey"
+    Valid key parameter names are listed in VALID_KEY_NAMES in src/constants.py
     """
 
     def outer(fn):
