@@ -1,0 +1,11 @@
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Use the latest stable version of Ruff
+    rev: v0.1.8 # Replace with the desired Ruff version
+    hooks:
+      - id: ruff
+        args: [--fix] # Optional: automatically fix fixable issues
+      - id: ruff-format # Optional: include Ruff's formatter
+      - id: ruff
+        args: ["check", "--select", "I", "--fix"]

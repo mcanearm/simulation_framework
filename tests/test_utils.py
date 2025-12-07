@@ -2,18 +2,8 @@ import dill
 import jax
 from jax import numpy as jnp
 
-from src.decorators import dgp
 from src.utils import DiskDict, function_timer, key_to_str, simulation_grid
-from tests.conftest import norm_data, ols, ridge
-
-
-@dgp(output=["X", "y", "beta"])
-def ols_data(prng_key, n=100, p=10):
-    k1, k2 = jax.random.split(prng_key, 2)
-    X = jax.random.normal(k1, shape=(n, p))
-    true_beta = jnp.arange(1, p + 1)
-    y = X @ true_beta + jax.random.normal(k2, shape=(n,)) * 0.5
-    return X, y, true_beta
+from tests.conftest import norm_data, ols, ols_data, ridge
 
 
 def test_timer():
@@ -23,6 +13,8 @@ def test_timer():
 
 
 def test_simulation_grid():
+    # Note here that this particular combination is invalid; that may or may
+    # not be worth checking
     scenarios = simulation_grid(
         dgps=(norm_data, {"n": [50, 100], "p": [5, 10]}),
         methods=[(ridge, {"alpha": [0.1, 1.0]}), (ols, {})],

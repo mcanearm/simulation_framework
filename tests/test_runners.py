@@ -1,52 +1,14 @@
-import jax
+import pytest
 from jax import numpy as jnp
 
-from src.decorators import dgp, method
 from src.runners import run_simulations
 from src.utils import simulation_grid
-
-
-@method(output="beta", label="Ridge")
-def ridge(X, y, alpha=1.0):
-    """
-    Fit a ridge regression model.
-    """
-    p = X.shape[1]
-    beta_hat = jnp.linalg.inv(X.T @ X + alpha * jnp.eye(p)) @ X.T @ y
-    return beta_hat
-
-
-@dgp(output=["X", "y", "beta"], label="linear_data")
-def linear_data(prng_key, n=100, p=10, noise=1.0, dist="normal"):
-    """
-    Generate linear regression data.
-    """
-    X = jax.random.normal(prng_key, shape=(n, p))
-    true_beta = jnp.arange(1, p + 1)
-    if dist == "normal":
-        noise = jax.random.normal(prng_key, shape=(n,)) * noise
-    elif dist == "t":
-        noise = jax.random.t(prng_key, df=3, shape=(n,)) * noise
-    noise = jax.random.normal(prng_key, shape=(n,)) * 0.5
-    y = X @ true_beta + noise
-    return X, y, true_beta
-
-
-@dgp(output=["X", "y", "beta"], label="exponential_data")
-def exponential_data(prng_key, n=100, p=10, noise=1.0):
-    """
-    Generate data with an exponential relationship.
-    """
-    X = jax.random.normal(prng_key, shape=(n, p))
-    true_beta = jnp.arange(1, p + 1)
-    noise = jax.random.normal(prng_key, shape=(n,)) * noise
-    y = jnp.exp(X @ true_beta / 10) + noise
-    return X, y, true_beta
+from tests.conftest import exponential_data, ols_data, ridge
 
 
 def test_run_simulations(key, tmpdir):
     scenarios = simulation_grid(
-        dgps=(linear_data, {"n": [50, 100], "p": [5, 10], "dist": ["normal", "t"]}),
+        dgps=(ols_data, {"n": [50, 100], "p": [5, 10], "dist": ["normal", "t"]}),
         methods=[(ridge, {"alpha": [0.1, 1.0]})],
     )
     data_output, method_output = run_simulations(
@@ -84,3 +46,8 @@ def test_sim_repeat(key, tmpdir):
         method1 = method_output1[k]
         method2 = method_output2[k]
         assert jnp.array_equal(method1, method2)
+
+
+@pytest.mark.skip(reason="Placeholder test")
+def test_method_with_rng(key):
+    pass
