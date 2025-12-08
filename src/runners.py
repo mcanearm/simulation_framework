@@ -6,17 +6,17 @@ import jax
 from jaxtyping import PRNGKeyArray
 
 from src.utils import DiskDict, SimulationScenario, key_to_str
-from src.decorators import DGP
+from src.decorators import DGP, Method
 from inspect import BoundArguments
 
 
 logger = logging.getLogger(__name__)
 
 
-def bind_arguments(fn: DGP, *args, **kwargs) -> BoundArguments:
+def bind_arguments(fn: DGP | Method, *args, **kwargs) -> BoundArguments:
     match_args = {k: v for k, v in kwargs.items() if k in fn.sig.parameters}
     sig = fn.sig
-    bound = sig.bind_partial(**match_args)
+    bound = sig.bind_partial(*args, **match_args)
     bound.apply_defaults()
 
     # skip the prng key argument for vmap
@@ -43,7 +43,7 @@ def run_simulations(
     evaluations=None,
     plotters=None,
     n_sims: int = 100,
-):
+) -> tuple[DiskDict, DiskDict]:
     """
     Run a fully vectorized simulation setup, given the DGP and the method. Note here that for each array of parameters,
     we need to vectorize over them and somehow work out the output dimensionality. I think we can use Xarray for this.
@@ -67,7 +67,8 @@ def run_simulations(
     for data_scenario in scenarios.dgp:
         dgp_fn, dgp_params = data_scenario
 
-        # overwrite the data_gen key on each iteration
+        # overwrite the data_gen key on each iteration so that the data
+        # is different on the next split.
         sim_gen_key, data_gen_key = jax.random.split(data_gen_key, 2)
         sim_gen_keys = jax.random.split(sim_gen_key, n_sims)
         dgp_argset = {dgp_fn._key_param_name: sim_gen_keys, **dgp_params}
@@ -83,30 +84,28 @@ def run_simulations(
 
         data_store[data_scenario.simkey] = dgp_output
 
+        # NOTE: It may be marginally preferable to move this outside the data loop
+        # so that ALL data is generated, and then the methods are fit. However, since
+        # the keys are deterministic and we use a different stream for both methods and
+        # data, this should be fine.
         for method_scenario in scenarios.method:
-            # might not use these, but it's cheap and handles cases where randomization
-            # is part of the model fit. Note that they are discarded automatically
-            # if the method does not require a key (based on the function signature.)
+            method_input_args = (
+                [dgp_fn.output] if isinstance(dgp_fn.output, str) else dgp_fn.output
+            )
             method, method_kwargs = method_scenario
-            method_fit_key, method_gen_key = jax.random.split(method_gen_key, 2)
-            method_fit_keys = jax.random.split(method_fit_key, n_sims)
-
             method_bind_params = {
                 **method_kwargs,
                 **dgp_output_args,
             }
+
             if method._requires_key:
+                method_fit_key, method_gen_key = jax.random.split(method_gen_key, 2)
+                method_fit_keys = jax.random.split(method_fit_key, n_sims)
                 method_bind_params[method._key_param_name] = method_fit_keys
+                method_input_args.append(method._key_param_name)
 
             bound = bind_arguments(method, **method_bind_params)
-
-            method_input_args = (
-                [dgp_fn.output] if isinstance(dgp_fn.output, str) else dgp_fn.output
-            )
-            if method._key_param_name and method._requires_key:
-                method_input_args.append(method._key_param_name)
             vmap_sig = create_vmap_signature(method_input_args, bound)
-
             method_batch_fn = jax.vmap(method, in_axes=vmap_sig)
             # batch over keys if necessary
             method_output = method_batch_fn(*bound.arguments.values())
