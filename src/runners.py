@@ -6,15 +6,34 @@ import jax
 from jaxtyping import PRNGKeyArray
 
 from src.utils import DiskDict, SimulationScenario, key_to_str
+from src.decorators import DGP
+from inspect import BoundArguments
+
 
 logger = logging.getLogger(__name__)
 
-# What's needed to run with a DGP and Method?
-# 1) output of the DGP saved to disk
-# 2) Reuse the data with multiple parameters on the methods
-# 3) Allocate a "chain" of steps that we can run sequentially
-# Solution: DataCatalog and MethodCatalog classes that can save/load data and methods; Method Catalog takes a data catalog as input,
-# but it should operate like a dictionar
+
+def bind_arguments(fn: DGP, *args, **kwargs) -> BoundArguments:
+    match_args = {k: v for k, v in kwargs.items() if k in fn.sig.parameters}
+    sig = fn.sig
+    bound = sig.bind_partial(**match_args)
+    bound.apply_defaults()
+
+    # skip the prng key argument for vmap
+    return bound
+
+
+def create_vmap_signature(
+    vmap_args: str | list[str], bound_args: BoundArguments
+) -> tuple:
+    if isinstance(vmap_args, str):
+        vmap_args = [vmap_args]
+    return tuple(
+        [
+            0 if param.name in vmap_args else None
+            for param in bound_args.signature.parameters.values()
+        ]
+    )
 
 
 def run_simulations(
@@ -51,40 +70,42 @@ def run_simulations(
         # overwrite the data_gen key on each iteration
         sim_gen_key, data_gen_key = jax.random.split(data_gen_key, 2)
         sim_gen_keys = jax.random.split(sim_gen_key, n_sims)
-        bound = dgp_fn.sig.bind_partial(**dgp_params)
-        bound.apply_defaults()
-        dgp_batch_fn = jax.vmap(dgp_fn, in_axes=(0, *[None] * len(bound.arguments)))
-        dgp_output = dgp_batch_fn(sim_gen_keys, *bound.arguments.values())
+        dgp_argset = {dgp_fn._key_param_name: sim_gen_keys, **dgp_params}
+
+        bound = bind_arguments(dgp_fn, **dgp_argset)
+        dgp_vmap = create_vmap_signature(dgp_fn._key_param_name, bound)
+        dgp_batch_fn = jax.vmap(
+            dgp_fn,
+            in_axes=dgp_vmap,
+        )
+        dgp_output = dgp_batch_fn(*bound.arguments.values())
+        dgp_output_args = {k: v for k, v in zip(dgp_fn.output, dgp_output)}
 
         data_store[data_scenario.simkey] = dgp_output
 
         for method_scenario in scenarios.method:
             # might not use these, but it's cheap and handles cases where randomization
-            # is part of the model fit.
+            # is part of the model fit. Note that they are discarded automatically
+            # if the method does not require a key (based on the function signature.)
             method, method_kwargs = method_scenario
             method_fit_key, method_gen_key = jax.random.split(method_gen_key, 2)
             method_fit_keys = jax.random.split(method_fit_key, n_sims)
 
-            if method._key_param_name:
-                # since the prng key has to be first, this should bind to the first argument; but maybe bug?
-                method_bind_params = {
-                    **method_kwargs,
-                    method._key_param_name: method_fit_keys,
-                }
-            else:
-                method_bind_params = method_kwargs
-
-            dgp_output_args = {
-                k: v
-                for k, v in zip(dgp_fn.output, dgp_output)
-                if k in method.sig.parameters
+            method_bind_params = {
+                **method_kwargs,
+                **dgp_output_args,
             }
-            bound = method.sig.bind_partial(**dgp_output_args, **method_bind_params)
-            bound.apply_defaults()
-            vmap_sig = tuple(
-                0 if k in dgp_output_args or k == method._key_param_name else None
-                for k in method.sig.parameters
+            if method._requires_key:
+                method_bind_params[method._key_param_name] = method_fit_keys
+
+            bound = bind_arguments(method, **method_bind_params)
+
+            method_input_args = (
+                [dgp_fn.output] if isinstance(dgp_fn.output, str) else dgp_fn.output
             )
+            if method._key_param_name and method._requires_key:
+                method_input_args.append(method._key_param_name)
+            vmap_sig = create_vmap_signature(method_input_args, bound)
 
             method_batch_fn = jax.vmap(method, in_axes=vmap_sig)
             # batch over keys if necessary
