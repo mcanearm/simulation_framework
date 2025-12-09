@@ -1,8 +1,8 @@
 from conftest import ols_data, ols, ridge
 from src.evaluators import rmse, evaluate_methods, mae, bias
 import pytest
-from src.runners import fit_models
-from src.utils import simulation_grid
+from src.methods import fit_methods
+from src.dgp import generate_data
 import pandas as pd
 import jax
 
@@ -10,17 +10,14 @@ import jax
 @pytest.fixture(scope="module")
 def simulation_set():
     key = jax.random.PRNGKey(0)
-    scenarios = simulation_grid(
-        dgps=[(ols_data, {"n": 100, "p": 10})],
-        methods=[(ridge, {"alpha": [0.1, 1.0, 10.0]}), (ols, {})],
+
+    generated_data = generate_data(key, [(ols_data, {"n": 100, "p": 10})], n_sims=100)
+    fitted_methods = fit_methods(
+        [(ridge, {"alpha": [0.1, 1.0, 10.0]}), (ols, {})],
+        data_dict=generated_data,
     )
 
-    sim_data, method_fits = fit_models(
-        key,
-        scenarios,
-        n_sims=100,
-    )
-    return sim_data, method_fits
+    return generated_data, fitted_methods
 
 
 @pytest.mark.parametrize(

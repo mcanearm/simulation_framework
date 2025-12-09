@@ -5,41 +5,20 @@ from typing import Union
 import jax
 from jaxtyping import PRNGKeyArray, Array
 
-from src.utils import DiskDict, SimulationScenario, key_to_str
-from src.decorators import DGP, Method
-from inspect import BoundArguments
+from decorators import DGP, Evaluator, Method
+from src.utils import DiskDict, key_to_str
 from collections.abc import MutableMapping
 
+from utils import bind_arguments, create_vmap_signature
 
 logger = logging.getLogger(__name__)
 
 
-def bind_arguments(fn: DGP | Method, *args, **kwargs) -> BoundArguments:
-    match_args = {k: v for k, v in kwargs.items() if k in fn.sig.parameters}
-    sig = fn.sig
-    bound = sig.bind_partial(*args, **match_args)
-    bound.apply_defaults()
-
-    # skip the prng key argument for vmap
-    return bound
-
-
-def create_vmap_signature(
-    vmap_args: str | list[str], bound_args: BoundArguments
-) -> tuple:
-    if isinstance(vmap_args, str):
-        vmap_args = [vmap_args]
-    return tuple(
-        [
-            0 if param.name in vmap_args else None
-            for param in bound_args.signature.parameters.values()
-        ]
-    )
-
-
-def fit_models(
+def run_simulations(
     prng_key: PRNGKeyArray,
-    scenarios: SimulationScenario,
+    dgp_mapping: list[tuple[DGP, dict]],
+    method_mapping: list[tuple[Method, dict]],
+    evaluator_mapping: list[tuple[Evaluator, dict]],
     n_sims: int = 100,
     data_dir: Union[Path, str, None] = None,
 ) -> tuple[MutableMapping[str, Array], MutableMapping[str, Array]]:
