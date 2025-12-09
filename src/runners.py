@@ -3,11 +3,12 @@ from pathlib import Path
 from typing import Union
 
 import jax
-from jaxtyping import PRNGKeyArray
+from jaxtyping import PRNGKeyArray, Array
 
 from src.utils import DiskDict, SimulationScenario, key_to_str
 from src.decorators import DGP, Method
 from inspect import BoundArguments
+from collections.abc import MutableMapping
 
 
 logger = logging.getLogger(__name__)
@@ -36,14 +37,12 @@ def create_vmap_signature(
     )
 
 
-def run_simulations(
+def fit_models(
     prng_key: PRNGKeyArray,
     scenarios: SimulationScenario,
-    data_dir: Union[Path, str] = Path("./simulation/"),
-    evaluations=None,
-    plotters=None,
     n_sims: int = 100,
-) -> tuple[DiskDict, DiskDict]:
+    data_dir: Union[Path, str, None] = None,
+) -> tuple[MutableMapping[str, Array], MutableMapping[str, Array]]:
     """
     Run a fully vectorized simulation setup, given the DGP and the method. Note here that for each array of parameters,
     we need to vectorize over them and somehow work out the output dimensionality. I think we can use Xarray for this.
@@ -55,12 +54,16 @@ def run_simulations(
     data_gen_key, method_gen_key = jax.random.split(prng_key, 2)
     key_str = key_to_str(prng_key)
 
-    # add n_sims to the output directory to ensure that different simulation sizes do not overwrite
-    # each other from run to run
-    output_dir = Path(data_dir) / key_str / f"n_sims={n_sims}"
-
-    data_store = DiskDict(output_dir / "data")
-    method_store = DiskDict(output_dir / "methods")
+    if data_dir is not None:
+        # add n_sims to the output directory to ensure that different simulation sizes do not overwrite
+        # each other from run to run
+        output_dir = Path(data_dir) / key_str / f"n_sims={n_sims}"
+        data_store = DiskDict(output_dir / "data")
+        method_store = DiskDict(output_dir / "methods")
+    else:
+        # use a plain dictionary if not data directory is provided
+        data_store = dict()
+        method_store = dict()
 
     # iterate to start via generated data; once all data is generated, fit
     # each method on each dataset as it is generated.
@@ -108,7 +111,8 @@ def run_simulations(
             vmap_sig = create_vmap_signature(method_input_args, bound)
             method_batch_fn = jax.vmap(method, in_axes=vmap_sig)
             method_output = method_batch_fn(*bound.arguments.values())
-            result_simkey = data_scenario.simkey + "_" + method_scenario.simkey
+            result_simkey = data_scenario.simkey + "__" + method_scenario.simkey
             method_store[result_simkey] = method_output
 
+    #
     return data_store, method_store

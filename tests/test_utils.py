@@ -1,6 +1,7 @@
 import dill
 import jax
 from jax import numpy as jnp
+import pytest
 
 from src.utils import DiskDict, function_timer, key_to_str, simulation_grid
 from tests.conftest import norm_data, ols, ols_data, ridge
@@ -12,16 +13,27 @@ def test_timer():
     assert timer.elapsed_time >= 0
 
 
-def test_simulation_grid():
+@pytest.mark.parametrize("n", [50, [50, 100]])
+@pytest.mark.parametrize("p", [10, [5, 10, 20]])
+@pytest.mark.parametrize("alpha", [0.1, [0.1, 1.0]])
+def test_simulation_grid(n, p, alpha):
     # Note here that this particular combination is invalid; that may or may
     # not be worth checking
     scenarios = simulation_grid(
-        dgps=(norm_data, {"n": [50, 100], "p": [5, 10]}),
-        methods=[(ridge, {"alpha": [0.1, 1.0]}), (ols, {})],
+        dgps=(norm_data, {"n": n, "p": p}),
+        methods=[(ridge, {"alpha": alpha}), (ols, {})],
     )
 
-    assert len(scenarios.dgp) == 4  # test 4 parameter combos
-    assert len(scenarios.method) == 3  # one for OLS, two for ridge
+    if isinstance(n, int):
+        n = [n]
+    if isinstance(p, int):
+        p = [p]
+    if isinstance(alpha, float):
+        alpha = [alpha]
+
+    assert len(scenarios.dgp) == len(n) * len(p)
+    assert len(scenarios.method) == len(alpha) + 1  # since OLS doesn't change
+    assert len(scenarios) == len(scenarios.dgp) * len(scenarios.method)
 
 
 def test_dict_saving(tmpdir):

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from itertools import product
 from pathlib import Path
 from time import time
-from typing import Union
+from typing import Union, Any
 
 import dill
 from jaxtyping import PRNGKeyArray
@@ -63,10 +63,22 @@ def get_arg_combinations(params):
     """
     Given a dict of lists pairing, return all combinations of the method with the parameter grid.
     """
-    return [
+    for k, v in params.items():
+        if not isinstance(v, list):
+            params[k] = [v]
+
+    combos = [
         {k: v for k, v in zip(params.keys(), param_combination)}
         for param_combination in product(*params.values())
     ]
+    params.values()
+    return combos
+
+
+def get_scenario_params(scenario_key_str: str) -> tuple[str, dict[str, Any]]:
+    param_strs = scenario_key_str.split("_")
+    param_dict = {k: v for param in param_strs[1:] for k, v in [param.split("=")]}
+    return param_strs[0], param_dict
 
 
 class Scenario(object):
@@ -75,11 +87,11 @@ class Scenario(object):
         self.param_set = param_set
 
     @property
-    def filename(self):
+    def filename(self) -> str:
         return f"{self.simkey}.pkl"
 
     @property
-    def simkey(self):
+    def simkey(self) -> str:
         param_str = "_".join([f"{k}={v}" for k, v in self.param_set.items()])
         return f"{self.fn.label}_{param_str}"
 
@@ -97,6 +109,9 @@ class Scenario(object):
 class SimulationScenario(object):
     dgp: list[Scenario]
     method: list[Scenario]
+
+    def __len__(self):
+        return len(self.dgp) * len(self.method)
 
 
 def simulation_grid(
