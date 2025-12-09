@@ -3,23 +3,8 @@ from collections.abc import MutableMapping
 from jax import numpy as jnp
 
 from runners import run_simulations
-from src.methods import fit_methods
 from src.evaluators import rmse, bias
 from tests.conftest import ols_data, ridge, ols
-
-
-@pytest.mark.skip(reason="Changed API")
-def test_fit_methods(key, tmpdir):
-    scenarios = simulation_grid(
-        dgps=(ols_data, {"n": [50, 100], "p": [5, 10], "dist": ["normal", "t"]}),
-        methods=[(ridge, {"alpha": [0.1, 1.0]})],
-    )
-    data_output, method_output = fit_methods(
-        key, scenarios, data_dir=tmpdir, n_sims=100
-    )
-
-    assert len(list(data_output.keys())) == 8
-    assert len(list(method_output.keys())) == 16  # ran two models for each gp process
 
 
 def test_sim_repeat(key, tmpdir):
