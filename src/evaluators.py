@@ -1,7 +1,6 @@
 from src.decorators import evaluator, Evaluator
 from jax import numpy as jnp
 from collections.abc import MutableMapping
-from src.utils import get_scenario_params
 import jax
 import pandas as pd
 from typing import NamedTuple
@@ -15,24 +14,14 @@ def rmse(true, target):
     return jnp.sqrt(jnp.mean((true - target) ** 2))
 
 
-def format_evaluator_to_df(data_key, method_key, target, evaluator, evaluations):
-    """
-    Lots of parameters, but actually just a helper function to everything into a long dataframe
-    """
-    nrows = len(getattr(evaluations, evaluator.output))
+@evaluator(output="bias", label="Bias")
+def bias(true, target):
+    return jnp.mean(target - true)
 
-    method_label, method_params = get_scenario_params(method_key)
-    data_label, method_params = get_scenario_params(data_key)
 
-    return pd.DataFrame(
-        {
-            "data_key": [data_key] * len(method_key),
-            "method_key": method_key,
-            "target": [target] * len(method_key),
-            "evaluator": [evaluator.label] * len(method_key),
-            "evaluations": getattr(evaluations, evaluator.output),
-        }
-    )
+@evaluator(output="mae", label="MAE")
+def mae(true, target):
+    return jnp.mean(jnp.abs(target - true))
 
 
 def _get_stack_of_estimates(method_output: list[NamedTuple], target):

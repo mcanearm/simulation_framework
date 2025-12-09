@@ -5,6 +5,9 @@ from jax import numpy as jnp
 from src.decorators import dgp, method
 
 
+# TODO: all these functions and fixtures are using the wrong interface for
+# random keys in JAX. Need to migrate to jax.random.key(), which coinceidentally,
+# will align nicely with numpy and should allow numpy RNG support as well.
 @pytest.fixture
 def key():
     return jax.random.PRNGKey(0)
