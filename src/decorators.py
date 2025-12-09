@@ -1,3 +1,4 @@
+from collections import namedtuple
 import inspect
 from functools import update_wrapper
 
@@ -12,6 +13,7 @@ class MetadataCaller(object):
 
         update_wrapper(self, fn)
         self.sig = inspect.signature(fn)
+        self.output_class = namedtuple(self.label, self.output)
 
         if set(self.sig.parameters.keys()).intersection(VALID_KEY_NAMES):
             first_item = list(self.sig.parameters.keys())[0]
@@ -32,7 +34,10 @@ class MetadataCaller(object):
     def __call__(self, *args, **kwargs):
         # if a data directory is provided, assume it was provided to save/load data
         result = self.fn(*args, **kwargs)
-        return result
+        if not isinstance(result, tuple):
+            return result
+        else:
+            return self.output_class(*result)
 
 
 class DGP(MetadataCaller):
@@ -67,7 +72,6 @@ def dgp(output, label=None):
                 f"Key argument in function signature is not valid. The FIRST function argument must be one of {VALID_KEY_NAMES}."
             )
         inner_label = label or fn.__name__
-
         return DGP(fn=fn, label=inner_label, output=output)
 
     return outer

@@ -107,7 +107,6 @@ def run_simulations(
             bound = bind_arguments(method, **method_bind_params)
             vmap_sig = create_vmap_signature(method_input_args, bound)
             method_batch_fn = jax.vmap(method, in_axes=vmap_sig)
-            # batch over keys if necessary
             method_output = method_batch_fn(*bound.arguments.values())
             result_simkey = data_scenario.simkey + "_" + method_scenario.simkey
             method_store[result_simkey] = method_output
