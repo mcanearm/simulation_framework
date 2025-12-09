@@ -9,14 +9,14 @@ def generate_data(
     prng_key,
     dgp_param_map: list[tuple[DGP, dict]],
     n_sims: int,
-    data_dir=None,
+    simulation_dir=None,
 ):
     data_gen_key, _ = jax.random.split(prng_key, 2)
 
-    if data_dir is not None:
+    if simulation_dir is not None:
         # add n_sims to the output directory to ensure that different simulation sizes do not overwrite
         # each other from run to run
-        output_dir = Path(data_dir) / f"n_sims={n_sims}"
+        output_dir = Path(simulation_dir) / f"n_sims={n_sims}"
         data_store = DiskDict(output_dir / "data")  # creates dir if it doesn't exist
     else:
         # use a plain dictionary if not data directory is provided
