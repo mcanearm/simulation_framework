@@ -1,4 +1,4 @@
-from conftest import ols_data, ols, ridge
+from tests.conftest import ols_data, ols, ridge
 from src.evaluators import rmse, evaluate_methods, mae, bias
 import pytest
 from src.methods import fit_methods

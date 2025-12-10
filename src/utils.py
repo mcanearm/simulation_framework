@@ -9,7 +9,7 @@ from typing import Any
 import dill
 from jaxtyping import PRNGKeyArray
 
-from decorators import MetadataCaller
+from src.decorators import MetadataCaller
 from src.decorators import DGP, Method
 
 
@@ -73,7 +73,6 @@ def get_arg_combinations(params):
         {k: v for k, v in zip(params.keys(), param_combination)}
         for param_combination in product(*params.values())
     ]
-    params.values()
     return combos
 
 

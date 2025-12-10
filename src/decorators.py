@@ -129,8 +129,8 @@ def evaluator(output, label=None):
 
 def plotter(output, label=None):
     """
-    Enforce an evaluator contract for simulation studies. Designed to take the outputs of evaluators and data generating
-    processes and return designated evaluation metrics.
+    Enforce a plotter contract for simulation studies. Designed to take the outputs of evaluators and/or data generating
+    processes and produce visualizations or plots.
     """
 
     def outer(fn):

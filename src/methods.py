@@ -3,8 +3,13 @@ import jax
 from pathlib import Path
 from collections.abc import MutableMapping
 from src.decorators import Method
-from src.utils import DiskDict, Scenario, get_arg_combinations
-from utils import bind_arguments, create_vmap_signature
+from src.utils import (
+    DiskDict,
+    Scenario,
+    get_arg_combinations,
+    bind_arguments,
+    create_vmap_signature,
+)
 from typing import Union
 
 
@@ -32,7 +37,7 @@ def fit_methods(
         output_dir = Path(simulation_dir) / f"n_sims={n_sims}"
         method_store = DiskDict(output_dir / "methods")
     else:
-        # use a plain dictionary if not data directory is provided
+        # use a plain dictionary if no data directory is provided
         method_store = dict()
 
     # iterate to start via generated data; once all data is generated, fit

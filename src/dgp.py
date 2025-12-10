@@ -1,6 +1,11 @@
 from src.decorators import DGP
-from src.utils import get_arg_combinations, DiskDict, Scenario
-from utils import bind_arguments, create_vmap_signature
+from src.utils import (
+    get_arg_combinations,
+    DiskDict,
+    Scenario,
+    bind_arguments,
+    create_vmap_signature,
+)
 from pathlib import Path
 import jax
 
@@ -19,7 +24,7 @@ def generate_data(
         output_dir = Path(simulation_dir) / f"n_sims={n_sims}"
         data_store = DiskDict(output_dir / "data")  # creates dir if it doesn't exist
     else:
-        # use a plain dictionary if not data directory is provided
+        # use a plain dictionary if no data directory is provided
         data_store = dict()
 
     # iterate to start via generated data; once all data is generated, fit

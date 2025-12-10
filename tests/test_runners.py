@@ -2,7 +2,7 @@ import pytest
 from collections.abc import MutableMapping
 from jax import numpy as jnp
 
-from runners import run_simulations
+from src.runners import run_simulations
 from src.evaluators import rmse, bias
 from tests.conftest import ols_data, ridge, ols
 

@@ -1,11 +1,12 @@
 import logging
 from pathlib import Path
 from typing import Union
+import pandas as pd
 
 import jax
 from jaxtyping import PRNGKeyArray, Array
 
-from decorators import DGP, Evaluator, Method
+from src.decorators import DGP, Evaluator, Method
 from src.utils import key_to_str
 from src.dgp import generate_data
 from src.methods import fit_methods
@@ -24,7 +25,7 @@ def run_simulations(
     targets,
     n_sims: int = 100,
     data_dir: Union[Path, str, None] = None,
-) -> tuple[MutableMapping[str, Array], MutableMapping[str, Array]]:
+) -> tuple[MutableMapping[str, Array], MutableMapping[str, Array], pd.DataFrame]:
     """
     Run a fully vectorized simulation setup, given the DGP and the method. Note here that for each array of parameters,
     we need to vectorize over them and somehow work out the output dimensionality. I think we can use Xarray for this.
@@ -41,7 +42,7 @@ def run_simulations(
         # each other from run to run
         output_dir = Path(data_dir) / key_str / f"n_sims={n_sims}"
     else:
-        # use a plain dictionary if not data directory is provided
+        # use a plain dictionary if no data directory is provided
         output_dir = None
 
     # iterate to start via generated data; once all data is generated, fit
