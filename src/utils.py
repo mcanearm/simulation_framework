@@ -1,13 +1,15 @@
 from collections.abc import MutableMapping
 from dataclasses import dataclass
+from inspect import BoundArguments
 from itertools import product
 from pathlib import Path
 from time import time
-from typing import Union
+from typing import Any
 
 import dill
 from jaxtyping import PRNGKeyArray
 
+from src.decorators import MetadataCaller
 from src.decorators import DGP, Method
 
 
@@ -63,23 +65,38 @@ def get_arg_combinations(params):
     """
     Given a dict of lists pairing, return all combinations of the method with the parameter grid.
     """
-    return [
+    for k, v in params.items():
+        if not isinstance(v, list):
+            params[k] = [v]
+
+    combos = [
         {k: v for k, v in zip(params.keys(), param_combination)}
         for param_combination in product(*params.values())
     ]
+    return combos
 
 
+def get_scenario_params(scenario_key_str: str) -> tuple[str, dict[str, Any]]:
+    param_strs = scenario_key_str.split("_")
+    param_dict = {k: v for param in param_strs[1:] for k, v in [param.split("=")]}
+    return param_strs[0], param_dict
+
+
+def construct_scenarios(fn, param_grid):
+    return [Scenario(fn, param_set) for param_set in get_arg_combinations(param_grid)]
+
+
+@dataclass
 class Scenario(object):
-    def __init__(self, fn: Union[Method, DGP], param_set):
-        self.fn = fn
-        self.param_set = param_set
+    fn: MetadataCaller
+    param_set: dict
 
     @property
-    def filename(self):
+    def filename(self) -> str:
         return f"{self.simkey}.pkl"
 
     @property
-    def simkey(self):
+    def simkey(self) -> str:
         param_str = "_".join([f"{k}={v}" for k, v in self.param_set.items()])
         return f"{self.fn.label}_{param_str}"
 
@@ -93,32 +110,24 @@ class Scenario(object):
         yield from [self.fn, self.param_set]
 
 
-@dataclass
-class SimulationScenario(object):
-    dgp: list[Scenario]
-    method: list[Scenario]
+def bind_arguments(fn: DGP | Method, *args, **kwargs) -> BoundArguments:
+    match_args = {k: v for k, v in kwargs.items() if k in fn.sig.parameters}
+    sig = fn.sig
+    bound = sig.bind_partial(*args, **match_args)
+    bound.apply_defaults()
+
+    # skip the prng key argument for vmap
+    return bound
 
 
-def simulation_grid(
-    dgps: tuple[DGP, dict] | list[tuple[DGP, dict]],
-    methods: tuple[Method, dict] | list[tuple[Method, dict]],
-):
-    """
-    Get unique function calls for each of the data generating process and the methods.
-    """
-
-    if isinstance(dgps, tuple):
-        dgps = [dgps]
-    if isinstance(methods, tuple):
-        methods = [methods]
-
-    fn_calls = [
+def create_vmap_signature(
+    vmap_args: str | list[str], bound_args: BoundArguments
+) -> tuple:
+    if isinstance(vmap_args, str):
+        vmap_args = [vmap_args]
+    return tuple(
         [
-            Scenario(method, param_set)
-            for method, params in fn_set
-            for param_set in get_arg_combinations(params)
+            0 if param.name in vmap_args else None
+            for param in bound_args.signature.parameters.values()
         ]
-        for fn_set in [dgps, methods]
-    ]
-
-    return SimulationScenario(*fn_calls)
+    )

@@ -2,26 +2,14 @@ import dill
 import jax
 from jax import numpy as jnp
 
-from src.utils import DiskDict, function_timer, key_to_str, simulation_grid
-from tests.conftest import norm_data, ols, ols_data, ridge
+from src.utils import DiskDict, function_timer, key_to_str
+from tests.conftest import ols_data
 
 
 def test_timer():
     with function_timer() as timer:
         _ = sum(range(100))
     assert timer.elapsed_time >= 0
-
-
-def test_simulation_grid():
-    # Note here that this particular combination is invalid; that may or may
-    # not be worth checking
-    scenarios = simulation_grid(
-        dgps=(norm_data, {"n": [50, 100], "p": [5, 10]}),
-        methods=[(ridge, {"alpha": [0.1, 1.0]}), (ols, {})],
-    )
-
-    assert len(scenarios.dgp) == 4  # test 4 parameter combos
-    assert len(scenarios.method) == 3  # one for OLS, two for ridge
 
 
 def test_dict_saving(tmpdir):

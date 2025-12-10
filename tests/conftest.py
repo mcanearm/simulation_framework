@@ -5,12 +5,15 @@ from jax import numpy as jnp
 from src.decorators import dgp, method
 
 
+# TODO: all these functions and fixtures are using the wrong interface for
+# random keys in JAX. Need to migrate to jax.random.key(), which coincidentally,
+# will align nicely with numpy and should allow numpy RNG support as well.
 @pytest.fixture
 def key():
     return jax.random.PRNGKey(0)
 
 
-@method(output="beta", label="Ridge")
+@method(output="beta_hat", label="Ridge")
 def ridge(X, y, alpha=0.1):
     """
     test docstring
@@ -20,7 +23,7 @@ def ridge(X, y, alpha=0.1):
     return beta_hat
 
 
-@method(output="beta", label="OLS")
+@method(output="beta_hat", label="OLS")
 def ols(X, y):
     """
     Ordinary Least Squares regression

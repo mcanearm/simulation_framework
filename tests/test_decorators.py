@@ -11,7 +11,8 @@ from tests.conftest import norm_data, ridge
 
 
 def test_dgp(key):
-    samples = norm_data(key, n=10, p=5)
+    output = norm_data(key, n=10, p=5)
+    samples = getattr(output, norm_data.output)
     assert samples.shape == (10, 5)
     assert norm_data.label == "normal"
 
@@ -24,7 +25,8 @@ def test_docstring_preservation(fn):
 
 def test_vmappable(key):
     key_array = jax.random.split(key, 5)
-    assert jax.vmap(norm_data, in_axes=(0,))(key_array).shape == (5, 100, 10)
+    output_data = jax.vmap(norm_data, in_axes=(0,))(key_array)
+    assert getattr(output_data, norm_data.output).shape == (5, 100, 10)
 
 
 def test_jitable(key):

@@ -2,6 +2,8 @@ from collections import namedtuple
 import inspect
 from functools import update_wrapper
 
+from jaxtyping import Array
+
 from src.constants import VALID_KEY_NAMES
 
 
@@ -31,11 +33,11 @@ class MetadataCaller(object):
         # self.output_class = namedtuple(self.label, self.output)
         self.sig = inspect.signature(fn)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> Array | tuple[Array]:
         # if a data directory is provided, assume it was provided to save/load data
         result = self.fn(*args, **kwargs)
         if not isinstance(result, tuple):
-            return result
+            return self.output_class(result)
         else:
             return self.output_class(*result)
 
@@ -43,13 +45,33 @@ class MetadataCaller(object):
 class DGP(MetadataCaller):
     def __init__(self, fn, label, output):
         super().__init__(fn, label, output)
-        self._role = "DGP"
+
+    def __repr__(self) -> str:
+        return f"<DGP: {self.label}, output: {self.output}>"
+
+
+class Evaluator(MetadataCaller):
+    def __init__(self, fn, label, output):
+        super().__init__(fn, label, output)
+
+    def __repr__(self) -> str:
+        return f"<Evaluator: {self.label}, output: {self.output}>"
 
 
 class Method(MetadataCaller):
     def __init__(self, fn, label, output):
         super().__init__(fn, label, output)
-        self._role = "Method"
+
+    def __repr__(self) -> str:
+        return f"<Method: {self.label}, output: {self.output}>"
+
+
+class Plotter(MetadataCaller):
+    def __init__(self, fn, label, output):
+        super().__init__(fn, label, output)
+
+    def __repr__(self) -> str:
+        return f"<Plotter: {self.label}, output: {self.output}>"
 
 
 def dgp(output, label=None):
@@ -86,16 +108,33 @@ def method(output, label=None):
     # it is not required.
 
     def outer(fn):
-        sig = inspect.signature(fn)
-
-        if set(sig.parameters.keys()).intersection(VALID_KEY_NAMES):
-            first_item = list(sig.parameters.keys())[0]
-            if first_item not in VALID_KEY_NAMES:
-                raise ValueError(
-                    f"Key argument in function signature is not valid. The FIRST function argument must be one of {VALID_KEY_NAMES}."
-                )
-
         inner_label = label or fn.__name__
         return Method(fn=fn, label=inner_label, output=output)
+
+    return outer
+
+
+def evaluator(output, label=None):
+    """
+    Enforce an evaluator contract for simulation studies. Designed to take the outputs of evaluators and data generating
+    processes and return designated evaluation metrics.
+    """
+
+    def outer(fn):
+        inner_label = label or fn.__name__
+        return Evaluator(fn=fn, label=inner_label, output=output)
+
+    return outer
+
+
+def plotter(output, label=None):
+    """
+    Enforce a plotter contract for simulation studies. Designed to take the outputs of evaluators and/or data generating
+    processes and produce visualizations or plots.
+    """
+
+    def outer(fn):
+        inner_label = label or fn.__name__
+        return Plotter(fn=fn, label=inner_label, output=output)
 
     return outer
