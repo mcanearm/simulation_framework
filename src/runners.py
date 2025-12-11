@@ -24,7 +24,7 @@ def run_simulations(
     evaluators: list[Evaluator],
     targets,
     n_sims: int = 100,
-    data_dir: Union[Path, str, None] = None,
+    simulation_dir: Union[Path, str, None] = None,
 ) -> tuple[MutableMapping[str, Array], MutableMapping[str, Array], pd.DataFrame]:
     """
     Run a fully vectorized simulation setup, given the DGP and the method. Note here that for each array of parameters,
@@ -37,10 +37,10 @@ def run_simulations(
     data_gen_key, method_gen_key, evaluator_key = jax.random.split(prng_key, 3)
     key_str = key_to_str(prng_key)
 
-    if data_dir is not None:
+    if simulation_dir is not None:
         # add n_sims to the output directory to ensure that different simulation sizes do not overwrite
         # each other from run to run
-        output_dir = Path(data_dir) / key_str / f"n_sims={n_sims}"
+        output_dir = Path(simulation_dir) / key_str / f"n_sims={n_sims}"
     else:
         # use a plain dictionary if no data directory is provided
         output_dir = None
@@ -59,5 +59,6 @@ def run_simulations(
         data_set,
         fitted_methods,
         targets=targets,
+        simulation_dir=output_dir,
     )
     return data_set, fitted_methods, evaluations

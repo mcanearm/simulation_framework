@@ -8,6 +8,10 @@ from src.utils import (
 )
 from pathlib import Path
 import jax
+import tqdm
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def generate_data(
@@ -21,7 +25,7 @@ def generate_data(
     if simulation_dir is not None:
         # add n_sims to the output directory to ensure that different simulation sizes do not overwrite
         # each other from run to run
-        output_dir = Path(simulation_dir) / f"n_sims={n_sims}"
+        output_dir = Path(simulation_dir)
         data_store = DiskDict(output_dir / "data")  # creates dir if it doesn't exist
     else:
         # use a plain dictionary if no data directory is provided
@@ -34,8 +38,14 @@ def generate_data(
         for dgp_fn, param_set in dgp_param_map
         for dgp_args in get_arg_combinations(param_set)
     ]
-    for scenario in scenarios:
+    logger.info(f"{len(scenarios)} scenarios generated.")
+    for scenario in tqdm.tqdm(scenarios, unit="datasets"):
         dgp_fn, dgp_args = scenario
+        if scenario.simkey in data_store:
+            logger.info(
+                f"Data for scenario {scenario.simkey} already exists; skipping generation."
+            )
+            continue
         # overwrite the data_gen key on each iteration so that the data
         # is different on the next split.
         sim_gen_key, data_gen_key = jax.random.split(data_gen_key, 2)

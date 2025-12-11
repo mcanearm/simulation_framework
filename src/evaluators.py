@@ -4,6 +4,7 @@ from collections.abc import MutableMapping
 import jax
 import pandas as pd
 from typing import NamedTuple
+from pathlib import Path
 from itertools import product
 
 import warnings
@@ -40,9 +41,8 @@ def _get_stack_of_estimates(method_output: list[NamedTuple], target):
     else:
         estimate_field = estimate_fields[0]
 
-    estimate_stack = jnp.stack(
-        [getattr(estimates, estimate_field) for estimates in method_output]
-    )
+    estimate_stack = [getattr(estimates, estimate_field) for estimates in method_output]
+    estimate_stack = jnp.stack(estimate_stack)
     return estimate_stack
 
 
@@ -51,6 +51,7 @@ def evaluate_methods(
     data_dict: MutableMapping,
     method_dict: MutableMapping,
     targets: str | list[str],
+    simulation_dir=None,
 ) -> pd.DataFrame:
     if not isinstance(evaluators, (list, tuple)):
         evaluators = [evaluators]
@@ -63,7 +64,9 @@ def evaluate_methods(
     for data_key in data_dict.keys():
         # filter to only method runs associated with this dataset. If none are found,
         # raise a warning and continue
-        relevant_methods = [(k, v) for k, v in method_dict.items() if data_key in k]
+        relevant_methods = [
+            (k, v) for k, v in method_dict.items() if f"{data_key}_" in k
+        ]
         if not relevant_methods:
             warn_msg = f"No methods found for data key {data_key}. Skipping evaluations for this dataset. Consider re-running the estimation step."
             warnings.warn(warn_msg)
@@ -99,5 +102,10 @@ def evaluate_methods(
         columns="evaluator",
         values="evaluations",
     )
+
+    if simulation_dir is not None:
+        output_dir = Path(simulation_dir) / "evaluations"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        full_results.to_csv(output_dir / "evaluations.csv")
 
     return full_results

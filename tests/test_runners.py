@@ -8,8 +8,8 @@ from tests.conftest import ols_data, ridge, ols
 
 
 def test_sim_repeat(key, tmpdir):
-    first_data_dir = tmpdir / "sim1"
-    second_data_dir = tmpdir / "sim2"
+    first_simulation_dir = tmpdir / "sim1"
+    second_simulation_dir = tmpdir / "sim2"
 
     data_gen = [
         (ols_data, {"n": 50, "p": 5, "dist": ["normal", "t"]}),
@@ -24,7 +24,7 @@ def test_sim_repeat(key, tmpdir):
         method_fit,
         evaluators,
         targets=["beta"],
-        data_dir=first_data_dir,
+        simulation_dir=first_simulation_dir,
     )
     simulated_outputs2 = run_simulations(
         key,
@@ -32,7 +32,7 @@ def test_sim_repeat(key, tmpdir):
         method_fit,
         evaluators,
         targets=["beta"],
-        data_dir=second_data_dir,
+        simulation_dir=second_simulation_dir,
     )
 
     for item1, item2 in zip(simulated_outputs1, simulated_outputs2):

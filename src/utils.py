@@ -5,12 +5,15 @@ from itertools import product
 from pathlib import Path
 from time import time
 from typing import Any
+import logging
 
 import dill
 from jaxtyping import PRNGKeyArray
 
 from src.decorators import MetadataCaller
 from src.decorators import DGP, Method
+
+logger = logging.getLogger(__name__)
 
 
 def key_to_str(key: PRNGKeyArray) -> str:
@@ -74,6 +77,27 @@ def get_arg_combinations(params):
         for param_combination in product(*params.values())
     ]
     return combos
+
+
+def generate_scenarios(fn, param_grid, sequential=False):
+    if sequential:
+        logger.debug("Generating scenarios sequentially.")
+        try:
+            scenarios = [
+                {k: v for k, v in zip(param_grid.keys(), param_val)}
+                for param_val in zip(*param_grid.values())
+            ]
+        except IndexError:
+            raise IndexError(
+                "All parameters provided must be the same length for sequential scenario generation."
+            )
+
+    else:
+        logger.debug("Generating scenarios in factorial manner.")
+        scenarios = [
+            Scenario(fn, param_set) for param_set in get_arg_combinations(param_grid)
+        ]
+    return scenarios
 
 
 def get_scenario_params(scenario_key_str: str) -> tuple[str, dict[str, Any]]:

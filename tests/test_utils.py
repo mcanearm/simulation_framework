@@ -1,8 +1,9 @@
+import pytest
 import dill
 import jax
 from jax import numpy as jnp
 
-from src.utils import DiskDict, function_timer, key_to_str
+from src.utils import DiskDict, function_timer, key_to_str, generate_scenarios
 from tests.conftest import ols_data
 
 
@@ -44,3 +45,12 @@ def test_dgp_saving(tmpdir):
 
 def test_key_str(key):
     assert key_to_str(key) == "key=0-0"
+
+
+@pytest.mark.parametrize(
+    "sequential,answer", [(False, 4), (True, 2)], ids=["factorial", "sequential"]
+)
+def test_scenario_generation(sequential, answer):
+    param_grid = {"n": [100, 200], "p": [5, 10]}
+    scenarios = generate_scenarios(ols_data, param_grid, sequential=sequential)
+    assert len(scenarios) == answer
