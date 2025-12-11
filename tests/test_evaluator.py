@@ -34,8 +34,8 @@ def test_evaluators(simulation_set, evaluators):
         targets="beta",
     )
     assert isinstance(evaluations, pd.DataFrame)
-    for col in ["data_key", "method_key", "target"]:
-        assert col in evaluations.index.names
+    for col in ["method", "data"]:
+        assert col in evaluations.columns
 
     if not isinstance(evaluators, list):
         evaluators = [evaluators]

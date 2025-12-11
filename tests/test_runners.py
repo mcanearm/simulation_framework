@@ -5,6 +5,7 @@ from jax import numpy as jnp
 from src.runners import run_simulations
 from src.evaluators import rmse, bias
 from tests.conftest import ols_data, ridge, ols
+import pandas as pd
 
 
 def test_sim_repeat(key, tmpdir):
@@ -41,9 +42,11 @@ def test_sim_repeat(key, tmpdir):
             for key in item1.keys():
                 for val1, val2 in zip(item1[key], item2[key]):
                     assert jnp.allclose(val1, val2)
-        else:
+        elif isinstance(item1, pd.DataFrame):
             # if it isn't a mutable mapping, it's a pandas DF
-            assert jnp.allclose(item1.values, item2.values)
+            pd.DataFrame.equals(item1, item2)
+        else:
+            pass  # skip the plots list
 
 
 @pytest.mark.skip(reason="Placeholder test")

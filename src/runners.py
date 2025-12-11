@@ -22,10 +22,11 @@ def run_simulations(
     dgp_mapping: list[tuple[DGP, dict]],
     method_mapping: list[tuple[Method, dict]],
     evaluators: list[Evaluator],
-    targets,
+    targets: list[str],
+    plotters: object | list[object] | None = None,
     n_sims: int = 100,
     simulation_dir: Union[Path, str, None] = None,
-) -> tuple[MutableMapping[str, Array], MutableMapping[str, Array], pd.DataFrame]:
+) -> tuple[MutableMapping[str, Array], MutableMapping[str, Array], pd.DataFrame, list]:
     """
     Run a fully vectorized simulation setup, given the DGP and the method. Note here that for each array of parameters,
     we need to vectorize over them and somehow work out the output dimensionality. I think we can use Xarray for this.
@@ -52,7 +53,10 @@ def run_simulations(
         data_gen_key, dgp_mapping, n_sims=n_sims, simulation_dir=output_dir
     )
     fitted_methods = fit_methods(
-        method_mapping, data_dict=data_set, simulation_dir=output_dir
+        method_mapping,
+        data_dict=data_set,
+        simulation_dir=output_dir,
+        prng_key=method_gen_key,
     )
     evaluations = evaluate_methods(
         evaluators,
@@ -60,5 +64,15 @@ def run_simulations(
         fitted_methods,
         targets=targets,
         simulation_dir=output_dir,
+        prng_key=evaluator_key,
     )
-    return data_set, fitted_methods, evaluations
+
+    plots = []
+    if plotters:
+        if not isinstance(plotters, list):
+            plotters = [plotters]
+        plots = [
+            plotter(evaluations, simulation_dir=output_dir)  # type: ignore
+            for plotter in plotters
+        ]
+    return data_set, fitted_methods, evaluations, plots

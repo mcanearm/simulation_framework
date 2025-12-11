@@ -1,10 +1,9 @@
 from src.decorators import DGP
 from src.utils import (
-    get_arg_combinations,
     DiskDict,
-    Scenario,
     bind_arguments,
     create_vmap_signature,
+    generate_scenarios,
 )
 from pathlib import Path
 import jax
@@ -19,6 +18,7 @@ def generate_data(
     dgp_param_map: list[tuple[DGP, dict]],
     n_sims: int,
     simulation_dir=None,
+    sequential_params=False,
 ):
     data_gen_key, _ = jax.random.split(prng_key, 2)
 
@@ -34,9 +34,11 @@ def generate_data(
     # iterate to start via generated data; once all data is generated, fit
     # each method on each dataset as it is generated.
     scenarios = [
-        Scenario(dgp_fn, dgp_args)
+        scenario
         for dgp_fn, param_set in dgp_param_map
-        for dgp_args in get_arg_combinations(param_set)
+        for scenario in generate_scenarios(
+            dgp_fn, param_set, sequential=sequential_params
+        )
     ]
     logger.info(f"{len(scenarios)} scenarios generated.")
     for scenario in tqdm.tqdm(scenarios, unit="datasets"):

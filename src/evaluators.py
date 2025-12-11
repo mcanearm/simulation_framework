@@ -6,23 +6,31 @@ import pandas as pd
 from typing import NamedTuple
 from pathlib import Path
 from itertools import product
+from src.utils import get_params_from_scenario_keystring
 
 import warnings
 
 
-@evaluator(output="rmse", label="RMSE")
+@evaluator(output="rmse")
 def rmse(true, target):
     return jnp.sqrt(jnp.mean((true - target) ** 2))
 
 
-@evaluator(output="bias", label="Bias")
+@evaluator(output="bias")
 def bias(true, target):
     return jnp.mean(target - true)
 
 
-@evaluator(output="mae", label="MAE")
+@evaluator(output="mae")
 def mae(true, target):
     return jnp.mean(jnp.abs(target - true))
+
+
+@evaluator(output="coverage", label="Coverage")
+def coverage(true, target, sd, alpha=0.95):
+    low = target - sd * jax.scipy.stats.norm.ppf(1 - alpha / 2)
+    high = target + sd * jax.scipy.stats.norm.ppf(1 - alpha / 2)
+    return jnp.mean((true >= low) & (true <= high))
 
 
 def _get_stack_of_estimates(method_output: list[NamedTuple], target):
@@ -52,6 +60,7 @@ def evaluate_methods(
     method_dict: MutableMapping,
     targets: str | list[str],
     simulation_dir=None,
+    prng_key=None,  # not used, but could be for things like bootstrap methods
 ) -> pd.DataFrame:
     if not isinstance(evaluators, (list, tuple)):
         evaluators = [evaluators]
@@ -81,31 +90,35 @@ def evaluate_methods(
             target_vals = getattr(data_obj, target)
             estimates = _get_stack_of_estimates(list(method_data), target)
 
-            # this feels very heavy for what we are doing, since we probably aren't going to be jitting
-            # or doing this over large numbers of methods
+            # iterate over the estimates with a copy of the true values
             evaluations = jax.vmap(evaluator_fn, in_axes=(None, 0))(
                 target_vals, estimates
             )
             output_data = pd.DataFrame(
-                {
-                    "data_key": [data_key] * len(method_keys),
-                    "method_key": method_keys,
-                    "target": [target] * len(method_keys),
-                    "evaluator": [evaluator_fn.label] * len(method_keys),
-                    "evaluations": getattr(evaluations, evaluator_fn.output),
-                }
+                [
+                    get_params_from_scenario_keystring(method_key)
+                    for method_key in method_keys
+                ]
+            ).assign(
+                target=target,
+                evaluator=evaluator_fn.label,
+                value=getattr(evaluations, evaluator_fn.output),
             )
+            # BUG: this assumes the output of the evaluator is a single value. Maybe that's ok.
             eval_frames.append(output_data)
 
-    full_results = pd.concat(eval_frames).pivot(
-        index=["data_key", "method_key", "target"],
+    eval_df = pd.concat(eval_frames)
+    index_cols = set(eval_df.columns).difference({"evaluator", "value"})
+
+    full_results = eval_df.pivot(
+        index=index_cols,
         columns="evaluator",
-        values="evaluations",
-    )
+        values="value",
+    ).reset_index()
 
     if simulation_dir is not None:
         output_dir = Path(simulation_dir) / "evaluations"
         output_dir.mkdir(parents=True, exist_ok=True)
-        full_results.to_csv(output_dir / "evaluations.csv")
+        full_results.to_csv(output_dir / "evaluations.csv", index=False)
 
     return full_results

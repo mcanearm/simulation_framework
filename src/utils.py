@@ -36,12 +36,19 @@ class DiskDict(MutableMapping):
         super().__init__()
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.allow_cache = allow_cache
+        self.cache = {}
 
     def __getitem__(self, key):
         filepath = self.data_dir / f"{key}.pkl"
         if filepath.exists():
-            with open(filepath, "rb") as f:
-                result = dill.load(f)
+            if key in self.cache:
+                result = self.cache[key]
+            else:
+                with open(filepath, "rb") as f:
+                    result = dill.load(f)
+                if self.allow_cache:
+                    self.cache[key] = result
             return result
         else:
             raise KeyError(f"Key {key} not found in DiskDict at {filepath}.")
@@ -50,11 +57,15 @@ class DiskDict(MutableMapping):
         filepath = self.data_dir / f"{key}.pkl"
         with open(filepath, "wb") as f:
             dill.dump(value, f)
+        if self.allow_cache:
+            self.cache[key] = value
 
     def __delitem__(self, key) -> None:
         filepath = self.data_dir / f"{key}.pkl"
         if filepath.exists():
             filepath.unlink()
+        if key in self.cache:
+            del self.cache[key]
 
     def __iter__(self):
         for file in self.data_dir.glob("*.pkl"):
@@ -108,6 +119,31 @@ def get_scenario_params(scenario_key_str: str) -> tuple[str, dict[str, Any]]:
 
 def construct_scenarios(fn, param_grid):
     return [Scenario(fn, param_set) for param_set in get_arg_combinations(param_grid)]
+
+
+def get_params_from_scenario_keystring(keystring, keystr_type=None):
+    if "__" in keystring:
+        data_keystr, method_keystr = keystring.split("__")
+        params = [
+            get_params_from_scenario_keystring(part, type)
+            for part, type in zip([data_keystr, method_keystr], ["data", "method"])
+        ]
+        param_dict = {
+            k: v for param_dict in params for k, v in param_dict.items() if param_dict
+        }
+        return param_dict
+    else:
+        param_strs = keystring.split("_")
+        label = {keystr_type: param_strs[0]}
+        param_strs = param_strs[1:]
+        if not param_strs:
+            return label
+        else:
+            param_strs = [p for p in param_strs if "=" in p]
+            param_dict = {
+                k: v for param in param_strs for k, v in [param.split("=")] if param
+            }
+            return {**label, **param_dict}
 
 
 @dataclass

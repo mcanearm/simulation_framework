@@ -8,10 +8,12 @@ dependencies = [
     "dill>=0.4.0",
     "jax>=0.8.0",
     "jaxtyping>=0.3.3",
+    "matplotlib>=3.10.8",
     "numba>=0.62.1",
     "numpy>=2.3.4",
     "scikit-learn>=1.7.2",
     "scipy>=1.16.3",
+    "seaborn>=0.13.2",
     "tqdm>=4.67.1",
     "xarray>=2025.12.0",
 ]
