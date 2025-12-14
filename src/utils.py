@@ -35,7 +35,7 @@ class function_timer(object):
     Context manager for timing a block of code.
 
     Usage:
-        with(function_timer() as timer):
+        with function_timer() as timer:
             # code block to time
 
         print(f"Elapsed time: {timer.elapsed_time} seconds")
@@ -58,9 +58,6 @@ class DiskDict(MutableMapping):
     Args:
         data_dir (str | Path): Directory to store the pickled objects.
         allow_cache (bool): Whether to cache loaded objects in memory. Default is True.
-
-    Returns:
-        DiskDict: A dictionary-like object that persists data on disk.
     """
 
     def __init__(self, data_dir, allow_cache=True):
@@ -128,13 +125,13 @@ class Scenario(object):
     set of parameters. This is used primarily to catalog different simulation
     configurations via keys in dictionaries.
     Args:
-        fn (MetadataCaller): The function (DGP or Method) for the scenario.
+        fn (MetadataCaller | JitWrapped): The function (DGP or Method) for the scenario.
         param_set (dict): A dictionary of parameter names and values for the scenario.
     Returns:
         Scenario: An instance representing the simulation scenario.
     """
 
-    fn: MetadataCaller
+    fn: MetadataCaller | JitWrapped
     param_set: dict
 
     @property
@@ -144,10 +141,10 @@ class Scenario(object):
     @property
     def simkey(self) -> str:
         param_str = "_".join([f"{k}={v}" for k, v in self.param_set.items()])
-        return f"{self.fn.label}_{param_str}"
+        return f"{self.fn.label}_{param_str}"  # type: ignore
 
     def __repr__(self):
-        return f"Scenario(fn={self.fn.label}, params={self.param_set})"
+        return f"Scenario(fn={self.fn.label}, params={self.param_set})"  # type: ignore
 
     def __str__(self):
         return self.__repr__()
@@ -169,6 +166,7 @@ def generate_scenarios(
     Args:
         fn (callable): The function (DGP or Method) for which to generate scenarios
         param_grid (dict): A dictionary where keys are parameter names and values are lists of parameter values.
+        sequential (bool): If True, generate scenarios sequentially (i.e., same length lists).
     """
     if sequential:
         logger.debug("Generating scenarios sequentially.")

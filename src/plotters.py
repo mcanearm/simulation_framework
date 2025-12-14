@@ -2,8 +2,12 @@ from matplotlib import pyplot as plt
 import pandas as pd
 import seaborn as sns
 from pathlib import Path
+import logging
 
 from typing import Union
+
+
+logger = logging.getLogger(__name__)
 
 
 def create_plotter_fn(
@@ -56,7 +60,7 @@ def create_plotter_fn(
             for col, value in param_filters.items():
                 if col not in data.columns:
                     # Optional: Add a warning or error if the column is missing
-                    print(
+                    logging.warning(
                         f"Warning: Filter column '{col}' not found in data. Skipping."
                     )
                     continue
@@ -77,14 +81,13 @@ def create_plotter_fn(
 
         # Check if any data remains after filtering
         if data.empty:
-            print(
+            logging.warning(
                 "Warning: Data is empty after applying filters. Skipping plot generation."
             )
             return  # Exit the drawer function early
 
         # End Gemini generation
 
-        # TODO: add funcitonality to filter data, because we have some stacking going on
         grid = sns.FacetGrid(data, **facet_grid_params)
         grid.map_dataframe(plot_class, x=x, y=y)
         grid.add_legend()

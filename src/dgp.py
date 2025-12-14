@@ -44,13 +44,6 @@ def generate_data(
             dgp_fn, param_set, sequential=sequential_params
         )
     ]
-    scenarios = [
-        scenario
-        for dgp_fn, param_set in dgp_param_map
-        for scenario in generate_scenarios(
-            dgp_fn, param_set, sequential=sequential_params
-        )
-    ]
     logger.info(f"{len(scenarios)} scenarios generated.")
     for scenario in tqdm.tqdm(scenarios, unit="datasets"):
         dgp_fn, dgp_args = scenario

@@ -48,8 +48,8 @@ def run_simulations(
         simulation_dir (Union[Path, str, None]): Directory to save simulation results.
     Returns:
         tuple: A tuple containing:
-            - data_set (MutableMapping[str, Array]): Generated data sets.
-            - fitted_methods (MutableMapping[str, Array]): Fitted method outputs.
+            - data_set (MutableMapping[str, ArrayLike]): Generated data sets.
+            - fitted_methods (MutableMapping[str, ArrayLike]): Fitted method outputs.
             - evaluations (pd.DataFrame): DataFrame of evaluation results.
             - plots (list): List of generated plots for further modification.
     """
