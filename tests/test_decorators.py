@@ -35,6 +35,9 @@ def test_jitable(key):
     simple_norm = jax.jit(norm_data, static_argnames=("n", "p"))
     assert simple_norm(key, n=10, p=3) is not None
 
+    # check that attributes are preserved after JIT compilation
+    assert simple_norm.label == "normal"  # type: ignore
+
 
 def test_wrong_key_name():
     with pytest.raises(ValueError):
@@ -54,7 +57,3 @@ def test_right_key_wrong_place(deco_class, valid_key_name):
             return jnp.zeros((n, 1))
         """
         exec(textwrap.dedent(my_fn))
-
-
-def test_grid_call(key):
-    pass

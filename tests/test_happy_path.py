@@ -8,7 +8,7 @@ import pytest
 import jax
 
 
-@pytest.mark.parametrize("run_jit", [True, False])
+@pytest.mark.parametrize("run_jit", [True, False], ids=["jit", "no_jit"])
 def test_happy_path(key, tmpdir, run_jit):
     ols_data_fn = ols_data
     ridge_fn = ridge

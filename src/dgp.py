@@ -7,6 +7,7 @@ from src.utils import (
     create_vmap_signature,
     generate_scenarios,
 )
+from collections.abc import MutableMapping
 from pathlib import Path
 import jax
 import tqdm
@@ -21,7 +22,7 @@ def generate_data(
     n_sims: int,
     simulation_dir: Union[str, Path, None] = None,
     sequential_params: bool = False,
-):
+) -> Union[MutableMapping[str, jax.typing.ArrayLike], dict]:
     data_gen_key, _ = jax.random.split(prng_key, 2)
 
     if simulation_dir is not None:
@@ -35,6 +36,14 @@ def generate_data(
 
     # iterate to start via generated data; once all data is generated, fit
     # each method on each dataset as it is generated.
+
+    scenarios = [
+        scenario
+        for dgp_fn, param_set in dgp_param_map
+        for scenario in generate_scenarios(
+            dgp_fn, param_set, sequential=sequential_params
+        )
+    ]
     scenarios = [
         scenario
         for dgp_fn, param_set in dgp_param_map

@@ -18,10 +18,14 @@ def create_plotter_fn(
     Factory function to create plotting functions that use seaborn's FacetGrid
     to create plots across multiple simulation facets. This little wrapper
     is not, frankly, particularly necessary, but it does make it a bit easier to
-    create consistent plots across different simulation runs. Custom plotted
-    is fully supported; effectively you just need to provide a plotting
+    create consistent plots across different simulation runs. Custom plotters
+    are fully supported; effectively you just need to provide a plotting
     function which takes the arbitrary evaluation_data and, optionally, the
     simulation directory, as arguments, and outputs the resulting plots.
+
+    Note: We may be able to make this an arbitrary class, but honestly,
+    there's no reason to throw decorators on it because we just use the provided
+    targets in the other functions to decide what to plot on Y
 
     Args:
         plot_class: A seaborn plotting function, e.g., sns.lineplot, sns.scatterplot.

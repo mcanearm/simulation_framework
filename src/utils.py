@@ -8,6 +8,7 @@ import logging
 import jax
 
 import dill
+from jax._src.pjit import JitWrapped
 from jaxtyping import PRNGKeyArray
 
 from src.decorators import MetadataCaller
@@ -122,6 +123,17 @@ def get_arg_combinations(params: dict):
 
 @dataclass
 class Scenario(object):
+    """
+    A simulation scenario pairing a function (DGP or Method) with a specific
+    set of parameters. This is used primarily to catalog different simulation
+    configurations via keys in dictionaries.
+    Args:
+        fn (MetadataCaller): The function (DGP or Method) for the scenario.
+        param_set (dict): A dictionary of parameter names and values for the scenario.
+    Returns:
+        Scenario: An instance representing the simulation scenario.
+    """
+
     fn: MetadataCaller
     param_set: dict
 
@@ -145,7 +157,9 @@ class Scenario(object):
 
 
 def generate_scenarios(
-    fn: DGP | Method, param_grid: dict[str, list[object]], sequential: bool = False
+    fn: MetadataCaller | JitWrapped,
+    param_grid: dict[str, list[object]],
+    sequential: bool = False,
 ) -> list[Scenario]:
     """
     Generate simulation scenarios based on the provided parameter grid. By
