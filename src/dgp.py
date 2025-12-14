@@ -1,3 +1,5 @@
+from jax._src.pjit import JitWrapped
+from typing import Union
 from src.decorators import DGP
 from src.utils import (
     DiskDict,
@@ -5,6 +7,7 @@ from src.utils import (
     create_vmap_signature,
     generate_scenarios,
 )
+from collections.abc import MutableMapping
 from pathlib import Path
 import jax
 import tqdm
@@ -15,11 +18,11 @@ logger = logging.getLogger(__name__)
 
 def generate_data(
     prng_key,
-    dgp_param_map: list[tuple[DGP, dict]],
+    dgp_param_map: list[tuple[DGP | JitWrapped, dict]],
     n_sims: int,
-    simulation_dir=None,
-    sequential_params=False,
-):
+    simulation_dir: Union[str, Path, None] = None,
+    sequential_params: bool = False,
+) -> Union[MutableMapping[str, jax.typing.ArrayLike], dict]:
     data_gen_key, _ = jax.random.split(prng_key, 2)
 
     if simulation_dir is not None:
@@ -33,6 +36,7 @@ def generate_data(
 
     # iterate to start via generated data; once all data is generated, fit
     # each method on each dataset as it is generated.
+
     scenarios = [
         scenario
         for dgp_fn, param_set in dgp_param_map

@@ -1,3 +1,4 @@
+from jax._src.pjit import JitWrapped
 import jax.typing
 import jax
 from pathlib import Path
@@ -5,27 +6,31 @@ from collections.abc import MutableMapping
 from src.decorators import Method
 from src.utils import (
     DiskDict,
-    Scenario,
-    get_arg_combinations,
     bind_arguments,
     create_vmap_signature,
+    generate_scenarios,
 )
 from typing import Union
 import tqdm
 
 
 def fit_methods(
-    model_mapping: list[tuple[Method, dict]],
-    data_dict,
+    model_mapping: list[tuple[Method | JitWrapped, dict]],
+    data_dict: MutableMapping,
     simulation_dir: Union[Path, str, None] = None,
     prng_key=None,
 ) -> MutableMapping[str, jax.typing.ArrayLike]:
     """
-    Run a fully vectorized simulation setup, given the DGP and the method. Note here that for each array of parameters,
-    we need to vectorize over them and somehow work out the output dimensionality. I think we can use Xarray for this.
+    Fit methods over generated data outputs.
 
-    You must pass in a valid PRNG key to begin the simulation process, and this is used to cache all data generation
-    and model outputs appropriately.
+    Args:
+        model_mapping (list[tuple[Method, dict]]): List of tuples pairing Method functions
+            with their parameter grids.
+        data_dict (MutableMapping): The dictionary of generated data objects.
+        simulation_dir (Union[Path, str, None]): Directory to save fitted method results.
+        prng_key: JAX PRNG key for randomness in methods that require it.
+    Returns:
+        MutableMapping[str, jax.typing.ArrayLike]: A dictionary-like object containing fitted method outputs.
     """
 
     # get the number of simulations from one of the data outputs; remember, they're
@@ -41,12 +46,10 @@ def fit_methods(
         # use a plain dictionary if no data directory is provided
         method_store = dict()
 
-    # iterate to start via generated data; once all data is generated, fit
-    # each method on each dataset as it is generated.
     method_scenarios = [
-        Scenario(method_fn, method_kwargs)
+        scenario
         for method_fn, param_set in model_mapping
-        for method_kwargs in get_arg_combinations(param_set)
+        for scenario in generate_scenarios(method_fn, param_set)
     ]
     for data_key, dgp_output in tqdm.tqdm(
         data_dict.items(), position=0, unit="datasets"
@@ -67,6 +70,8 @@ def fit_methods(
 
             if method_fn._requires_key:
                 try:
+                    # split the provided key and overwrite it for the next method
+                    # if one is required
                     method_fit_key, prng_key = jax.random.split(prng_key, 2)
                 # TODO: modify to be real exception later
                 except Exception as e:

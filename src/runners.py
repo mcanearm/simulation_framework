@@ -1,10 +1,11 @@
 import logging
 from pathlib import Path
 from typing import Union
+from jax._src.pjit import JitWrapped
 import pandas as pd
 
 import jax
-from jaxtyping import PRNGKeyArray, Array
+from jaxtyping import PRNGKeyArray, ArrayLike
 
 from src.decorators import DGP, Evaluator, Method
 from src.utils import key_to_str
@@ -19,20 +20,38 @@ logger = logging.getLogger(__name__)
 
 def run_simulations(
     prng_key: PRNGKeyArray,
-    dgp_mapping: list[tuple[DGP, dict]],
-    method_mapping: list[tuple[Method, dict]],
+    dgp_mapping: list[tuple[DGP | JitWrapped, dict]],
+    method_mapping: list[tuple[Method | JitWrapped, dict]],
     evaluators: list[Evaluator],
     targets: list[str],
     plotters: object | list[object] | None = None,
     n_sims: int = 100,
     simulation_dir: Union[Path, str, None] = None,
-) -> tuple[MutableMapping[str, Array], MutableMapping[str, Array], pd.DataFrame, list]:
+) -> tuple[
+    MutableMapping[str, ArrayLike], MutableMapping[str, ArrayLike], pd.DataFrame, list
+]:
     """
-    Run a fully vectorized simulation setup, given the DGP and the method. Note here that for each array of parameters,
-    we need to vectorize over them and somehow work out the output dimensionality. I think we can use Xarray for this.
+    Run a simulation setup for all combinations of data generating processes and
+    methods, evaluate the methods, and optionally create plots. If a simulation directory
+    is provided, intermediate and final results are saved to disk.
 
-    You must pass in a valid PRNG key to begin the simulation process, and this is used to cache all data generation
-    and model outputs appropriately.
+    Args:
+        prng_key (PRNGKeyArray): JAX PRNG key for randomness.
+        dgp_mapping (list[tuple[DGP | JitWrapped, dict]]): List of tuples pairing DGP functions
+            with their parameter grids.
+        method_mapping (list[tuple[Method | JitWrapped, dict]]): List of tuples pairing Method functions
+            with their parameter grids.
+        evaluators (list[Evaluator]): List of evaluator functions to assess method performance.
+        targets (list[str]): List of target variable names to evaluate.
+        plotters (object | list[object] | None): Plotter function(s) to create visualizations.
+        n_sims (int): Number of simulations to run for each scenario.
+        simulation_dir (Union[Path, str, None]): Directory to save simulation results.
+    Returns:
+        tuple: A tuple containing:
+            - data_set (MutableMapping[str, ArrayLike]): Generated data sets.
+            - fitted_methods (MutableMapping[str, ArrayLike]): Fitted method outputs.
+            - evaluations (pd.DataFrame): DataFrame of evaluation results.
+            - plots (list): List of generated plots for further modification.
     """
 
     data_gen_key, method_gen_key, evaluator_key = jax.random.split(prng_key, 3)

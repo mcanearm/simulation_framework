@@ -10,7 +10,7 @@ from src.decorators import dgp, method
 # will align nicely with numpy and should allow numpy RNG support as well.
 @pytest.fixture
 def key():
-    return jax.random.PRNGKey(0)
+    return jax.random.key(0)
 
 
 @method(output="beta_hat", label="Ridge")
