@@ -1,6 +1,7 @@
 import jax
 import pytest
 from jax import numpy as jnp
+import numpy as np
 
 from src.decorators import dgp, method
 
@@ -66,4 +67,13 @@ def exponential_data(prng_key, n=100, p=10, noise=1.0):
     true_beta = jnp.arange(1, p + 1)
     noise = jax.random.normal(prng_key, shape=(n,)) * noise
     y = jnp.exp(X @ true_beta / 10) + noise
+    return X, y, true_beta
+
+
+@dgp(output=["X", "y", "beta"], label="NP_OLS")
+def np_ols(rng, n=100, p=10):
+    X = rng.normal(size=(n, p))
+    true_beta = np.arange(1, p + 1)
+    noise = rng.normal(size=n) * 0.5
+    y = X @ true_beta + noise
     return X, y, true_beta
