@@ -81,8 +81,8 @@ def create_plotter_fn(
 
         # Check if any data remains after filtering
         if data.empty:
-            logging.warning(
-                "Warning: Data is empty after applying filters. Skipping plot generation."
+            logger.warning(
+                "Data is empty after applying filters. Skipping plot generation."
             )
             return  # Exit the drawer function early
 

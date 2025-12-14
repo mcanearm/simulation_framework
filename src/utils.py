@@ -106,6 +106,9 @@ class DiskDict(MutableMapping):
 def get_arg_combinations(params: dict):
     """
     Given a dict of lists pairing, return all combinations of the method with the parameter grid.
+
+    Returns:
+        list[dict]: A list of dictionaries, each representing a unique combination of parameter values.
     """
     for k, v in params.items():
         if not isinstance(v, list):
@@ -127,8 +130,6 @@ class Scenario(object):
     Args:
         fn (MetadataCaller | JitWrapped): The function (DGP or Method) for the scenario.
         param_set (dict): A dictionary of parameter names and values for the scenario.
-    Returns:
-        Scenario: An instance representing the simulation scenario.
     """
 
     fn: MetadataCaller | JitWrapped
@@ -164,8 +165,12 @@ def generate_scenarios(
     can also treat each parameter as sequential (i.e., same length lists).
 
     Args:
-        fn (callable): The function (DGP or Method) for which to generate scenarios
-        param_grid (dict): A dictionary where keys are parameter names and values are lists of parameter values.
+        fn (MetadataCaller | JitWrapped): The function (DGP or Method) for which to generate scenarios.
+        param_grid (dict[str, list[object]]): A dictionary where keys are parameter names and values are lists of parameter values.
+        sequential (bool, optional): If True, treat each parameter as sequential (i.e., combine parameters by index rather than all combinations). Defaults to False.
+
+    Returns:
+        list[Scenario]: A list of Scenario objects representing the generated simulation scenarios.
         sequential (bool): If True, generate scenarios sequentially (i.e., same length lists).
     """
     if sequential:
