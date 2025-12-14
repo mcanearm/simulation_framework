@@ -1,18 +1,18 @@
 import pytest
 from src.dgp import generate_data
-from tests.conftest import ols_data, np_ols
+from example.ridge_example import linear_data_jax, linear_data_np
 from collections.abc import MutableMapping
 import jax
 import numpy as np
 
 
-jax_key = jax.random.PRNGKey(0)
+jax_key = jax.random.key(0)
 np_rng = np.random.default_rng(0)
 
 
 @pytest.mark.parametrize(
     "dgp_fn, rng_key",
-    [(ols_data, jax_key), (np_ols, np_rng)],
+    [(linear_data_jax, jax_key), (linear_data_np, np_rng)],
     ids=["jax_dgp", "numpy_dgp"],
 )
 def test_data_generation(rng_key, dgp_fn):

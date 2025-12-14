@@ -7,7 +7,8 @@ from jax import numpy as jnp
 
 from src.constants import VALID_KEY_NAMES
 from src.decorators import dgp, method
-from tests.conftest import norm_data, ridge
+from example.ridge_example import jax_ridge
+from tests.conftest import norm_data
 
 
 def test_dgp(key):
@@ -17,7 +18,7 @@ def test_dgp(key):
     assert norm_data.label == "normal"
 
 
-@pytest.mark.parametrize("fn", [norm_data, ridge])
+@pytest.mark.parametrize("fn", [norm_data, jax_ridge])
 def test_docstring_preservation(fn):
     tmp = inspect.getdoc(fn)
     assert tmp == "test docstring"

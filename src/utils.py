@@ -9,6 +9,8 @@ import jax
 import numpy as np
 from hashlib import md5
 
+from matplotlib import pyplot as plt
+
 import dill
 from jax._src.pjit import JitWrapped
 from jaxtyping import PRNGKeyArray
@@ -116,6 +118,31 @@ class DiskDict(MutableMapping):
 
     def __len__(self) -> int:
         return len(list(self.data_dir.glob("*.pkl")))
+
+
+class ImageDict(DiskDict):
+    """
+    Dictionary-like object that stores matplotlib figures on disk as PNG files.
+    Each key is stored as a separate .png file.
+
+    Args:
+        data_dir (str | Path): Directory to store the image files.
+    """
+
+    def __init__(self, data_dir):
+        super().__init__(data_dir, allow_cache=False)
+
+    def __getitem__(self, key) -> plt.Figure:
+        filepath = self.data_dir / f"{key}.png"
+        if filepath.exists():
+            fig = plt.imread(filepath)
+            return fig
+        else:
+            raise KeyError(f"Key {key} not found in ImageDict at {filepath}.")
+
+    def __setitem__(self, key, value: plt.Figure) -> None:
+        filepath = self.data_dir / f"{key}.png"
+        value.savefig(filepath)
 
 
 def get_arg_combinations(params: dict):

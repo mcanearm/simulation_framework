@@ -1,4 +1,4 @@
-from tests.conftest import ols_data, ols, ridge
+from example.ridge_example import jax_ridge, jax_ols, linear_data_jax
 from src.evaluators import rmse, evaluate_methods, mae, bias
 import pytest
 from src.methods import fit_methods
@@ -11,9 +11,11 @@ import jax
 def simulation_set():
     key = jax.random.PRNGKey(0)
 
-    generated_data = generate_data(key, [(ols_data, {"n": 100, "p": 10})], n_sims=100)
+    generated_data = generate_data(
+        key, [(linear_data_jax, {"n": 100, "p": 10})], n_sims=100
+    )
     fitted_methods = fit_methods(
-        [(ridge, {"alpha": [0.1, 1.0, 10.0]}), (ols, {})],
+        [(jax_ridge, {"alpha": [0.1, 1.0, 10.0]}), (jax_ols, {})],
         data_dict=generated_data,
     )
 

@@ -4,7 +4,7 @@ import jax
 from jax import numpy as jnp
 
 from src.utils import DiskDict, function_timer, key_to_str, generate_scenarios
-from tests.conftest import ols_data
+from example.ridge_example import linear_data_jax
 
 
 def test_timer():
@@ -33,7 +33,7 @@ def test_dict_resume(tmpdir):
 def test_dgp_saving(tmpdir):
     data = DiskDict(tmpdir)
     key = jax.random.PRNGKey(0)
-    X, y, beta = ols_data(key, n=50, p=5)
+    X, y, beta = linear_data_jax(key, n=50, p=5)
 
     data["ols_data_0"] = {"X": X, "y": y, "beta": beta}
 
@@ -52,5 +52,5 @@ def test_key_str(key):
 )
 def test_scenario_generation(sequential, answer):
     param_grid = {"n": [100, 200], "p": [5, 10]}
-    scenarios = generate_scenarios(ols_data, param_grid, sequential=sequential)
+    scenarios = generate_scenarios(linear_data_jax, param_grid, sequential=sequential)
     assert len(scenarios) == answer

@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Union
 from jax._src.pjit import JitWrapped
 import pandas as pd
+import numpy as np
+from typing import Callable
 
 import jax
 from jaxtyping import PRNGKeyArray, ArrayLike
@@ -12,6 +14,7 @@ from src.utils import key_to_str
 from src.dgp import generate_data
 from src.methods import fit_methods
 from src.evaluators import evaluate_methods
+from src.plotters import plot_results
 from collections.abc import MutableMapping
 
 
@@ -19,16 +22,20 @@ logger = logging.getLogger(__name__)
 
 
 def run_simulations(
-    prng_key: PRNGKeyArray,
+    prng_key: PRNGKeyArray | np.random.Generator,
     dgp_mapping: list[tuple[DGP | JitWrapped, dict]],
     method_mapping: list[tuple[Method | JitWrapped, dict]],
     evaluators: list[Evaluator],
     targets: list[str],
-    plotters: object | list[object] | None = None,
+    plotters: tuple[Callable, Callable] | list[tuple[Callable, Callable]] | None = None,
     n_sims: int = 100,
     simulation_dir: Union[Path, str, None] = None,
+    label=None,
 ) -> tuple[
-    MutableMapping[str, ArrayLike], MutableMapping[str, ArrayLike], pd.DataFrame, list
+    MutableMapping[str, ArrayLike],
+    MutableMapping[str, ArrayLike],
+    pd.DataFrame,
+    MutableMapping,
 ]:
     """
     Run a simulation setup for all combinations of data generating processes and
@@ -46,6 +53,7 @@ def run_simulations(
         plotters (object | list[object] | None): Plotter function(s) to create visualizations.
         n_sims (int): Number of simulations to run for each scenario.
         simulation_dir (Union[Path, str, None]): Directory to save simulation results.
+        label (Union[str, None]): Optional label for the simulation run.
     Returns:
         tuple: A tuple containing:
             - data_set (MutableMapping[str, ArrayLike]): Generated data sets.
@@ -64,8 +72,11 @@ def run_simulations(
 
     if simulation_dir is not None:
         # add n_sims to the output directory to ensure that different simulation sizes do not overwrite
-        # each other from run to run
-        output_dir = Path(simulation_dir) / key_str / f"n_sims={n_sims}"
+        # each other from run to run.
+        output_dir = (
+            Path(simulation_dir) / label if label is not None else Path(simulation_dir)
+        )
+        output_dir = output_dir / key_str / f"n_sims={n_sims}"
     else:
         # use a plain dictionary if no data directory is provided
         output_dir = None
@@ -91,12 +102,10 @@ def run_simulations(
         prng_key=evaluator_key,
     )
 
-    plots = []
     if plotters:
         if not isinstance(plotters, list):
             plotters = [plotters]
-        plots = [
-            plotter(evaluations, simulation_dir=output_dir)  # type: ignore
-            for plotter in plotters
-        ]
+        plots = plot_results(evaluations, plotters, targets, output_dir)
+    else:
+        plots = dict()
     return data_set, fitted_methods, evaluations, plots

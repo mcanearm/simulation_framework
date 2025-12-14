@@ -1,5 +1,5 @@
 from src.runners import run_simulations
-from tests.conftest import ols_data, ridge, np_ridge, np_ols
+from example.ridge_example import jax_ridge, linear_data_jax, linear_data_np, np_ridge
 from src.evaluators import rmse, bias, mae
 from src.plotters import create_plotter_fn
 import seaborn as sns
@@ -15,9 +15,9 @@ rng = np.random.default_rng(0)
 @pytest.mark.parametrize(
     "key_dgp_method_jit",
     [
-        [rng, np_ols, np_ridge, False],
-        [my_key, ols_data, ridge, False],
-        [my_key, ols_data, ridge, True],
+        [rng, linear_data_np, np_ridge, False],
+        [my_key, linear_data_jax, jax_ridge, False],
+        [my_key, linear_data_jax, jax_ridge, True],
     ],
     ids=["numpy", "jax-no-jit", "jax-jit"],
 )
@@ -44,23 +44,36 @@ def test_happy_path(tmpdir, key_dgp_method_jit):
         ],
         evaluators=[rmse, bias, mae],
         plotters=[
-            create_plotter_fn(
-                x="p",
-                y="rmse",
-                hue="method",
-                col="dist",
-                plot_class=sns.lineplot,
+            (
+                rmse,
+                create_plotter_fn(
+                    x="p",
+                    hue="method",
+                    col="dist",
+                    plot_class=sns.lineplot,
+                ),
             ),
-            create_plotter_fn(
-                x="method",
-                y="mae",
-                col="p",
-                row="n",
-                plot_class=sns.barplot,
+            (
+                bias,
+                create_plotter_fn(
+                    x="method",
+                    col="p",
+                    row="n",
+                    plot_class=sns.barplot,
+                ),
+            ),
+            (
+                mae,
+                create_plotter_fn(
+                    x="p",
+                    hue="method",
+                    col="dist",
+                    plot_class=sns.lineplot,
+                ),
             ),
         ],
         targets=["beta"],
-        n_sims=100,
+        n_sims=50,
         simulation_dir=tmpdir / "example",
     )
     sim_dir = Path(tmpdir) / "example"

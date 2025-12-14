@@ -4,7 +4,7 @@ from jax import numpy as jnp
 
 from src.runners import run_simulations
 from src.evaluators import rmse, bias
-from tests.conftest import ols_data, ridge, ols
+from example.ridge_example import jax_ridge, jax_ols, linear_data_jax
 import pandas as pd
 
 
@@ -13,9 +13,9 @@ def test_sim_repeat(key, tmpdir):
     second_simulation_dir = tmpdir / "sim2"
 
     data_gen = [
-        (ols_data, {"n": 50, "p": 5, "dist": ["normal", "t"]}),
+        (linear_data_jax, {"n": 50, "p": 5, "dist": ["normal", "t"]}),
     ]
-    method_fit = [(ridge, {"alpha": [0.1, 1.0]}), (ols, {})]
+    method_fit = [(jax_ridge, {"alpha": [0.1, 1.0]}), (jax_ols, {})]
 
     evaluators = [rmse, bias]
 
