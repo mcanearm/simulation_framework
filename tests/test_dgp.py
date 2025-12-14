@@ -21,3 +21,5 @@ def test_data_generation(rng_key, dgp_fn):
     )
 
     assert isinstance(output, MutableMapping)
+    for key, data in output.items():
+        assert data[0].shape[0] == 1000

@@ -1,28 +1,37 @@
 from src.runners import run_simulations
-from tests.conftest import ols_data, ridge, ols
+from tests.conftest import ols_data, ridge, np_ridge, np_ols
 from src.evaluators import rmse, bias, mae
 from src.plotters import create_plotter_fn
 import seaborn as sns
 from pathlib import Path
 import pytest
 import jax
+import numpy as np
+
+my_key = jax.random.PRNGKey(0)
+rng = np.random.default_rng(0)
 
 
-@pytest.mark.parametrize("run_jit", [True, False], ids=["jit", "no_jit"])
-def test_happy_path(key, tmpdir, run_jit):
-    ols_data_fn = ols_data
-    ridge_fn = ridge
-    ols_fn = ols
+@pytest.mark.parametrize(
+    "key_dgp_method_jit",
+    [
+        [rng, np_ols, np_ridge, False],
+        [my_key, ols_data, ridge, False],
+        [my_key, ols_data, ridge, True],
+    ],
+    ids=["numpy", "jax-no-jit", "jax-jit"],
+)
+def test_happy_path(tmpdir, key_dgp_method_jit):
+    key, data_fn, method_fn, run_jit = key_dgp_method_jit
     if run_jit:
-        ols_data_fn = jax.jit(ols_data, static_argnames=["n", "p", "dist"])
-        ridge_fn = jax.jit(ridge, static_argnames=["alpha"])
-        ols_fn = jax.jit(ols)
+        data_fn = jax.jit(data_fn, static_argnames=["n", "p", "dist"])
+        method_fn = jax.jit(method_fn, static_argnames=["alpha"])
 
     data, methods, evaluations, plots = run_simulations(
         key,
         dgp_mapping=[
             (
-                ols_data_fn,
+                data_fn,
                 {
                     "n": [100, 200],
                     "p": [5, 10, 20, 50],
@@ -31,8 +40,7 @@ def test_happy_path(key, tmpdir, run_jit):
             )
         ],
         method_mapping=[
-            (ridge_fn, {"alpha": [0.01, 0.1, 0.5, 1.0, 2.0]}),
-            (ols_fn, {}),
+            (method_fn, {"alpha": [0.01, 0.1, 0.5, 1.0, 2.0]}),
         ],
         evaluators=[rmse, bias, mae],
         plotters=[

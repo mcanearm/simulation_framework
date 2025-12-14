@@ -77,3 +77,13 @@ def np_ols(rng, n=100, p=10):
     noise = rng.normal(size=n) * 0.5
     y = X @ true_beta + noise
     return X, y, true_beta
+
+
+@method(output="beta_hat", label="RidgeNP")
+def np_ridge(X, y, alpha=0.1):
+    """
+    test docstring
+    """
+    p = X.shape[1]
+    beta_hat = np.linalg.inv(X.T @ X + alpha * jnp.eye(p)) @ X.T @ y
+    return beta_hat
