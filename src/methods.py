@@ -34,6 +34,10 @@ def _execute(method_fn, method_input_args, method_kwargs, prng_key=None):
 
 
 def _execute_jax(method_fn, method_input_args, method_kwargs, prng_key=None):
+    """
+    Execute method using a JAX function - not meant for calling by users directly.
+    This is a manual dispatching paradigm based on the
+    """
     if method_fn._requires_key and prng_key is not None:
         method_input_args[method_fn._key_param_name] = prng_key
 

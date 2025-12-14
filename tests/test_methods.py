@@ -31,12 +31,18 @@ def np_datasets():
 
 
 @pytest.mark.parametrize(
-    "dataset,method",
-    [("jax_datasets", ridge), ("np_datasets", np_ridge)],
-    ids=["jax", "numpy"],
+    "dataset", ["jax_datasets", "np_datasets"], ids=["jax", "numpy"]
+)
+@pytest.mark.parametrize(
+    "method",
+    [ridge, np_ridge],
+    ids=["jax_ridge", "numpy_ridge"],
 )
 def test_fit_models(dataset, method, request):
     datadict = request.getfixturevalue(dataset)
+
+    if dataset == "jax_datasets" and method == np_ridge:
+        pytest.skip("Skipping incompatible numpy method with jax dataset")
     model_fits = fit_methods(
         model_mapping=[(method, {"alpha": [0.1, 1.0]})],
         data_dict=datadict,
