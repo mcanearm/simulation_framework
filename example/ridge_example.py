@@ -1,4 +1,5 @@
 import jax
+import pandas as pd
 import numpy as np
 from jax import numpy as jnp
 
@@ -90,8 +91,8 @@ if __name__ == "__main__":
                 (
                     dgp,
                     {
-                        "n": [100, 1000, 2000],
-                        "p": [10, 50, 100, 500],
+                        "n": [1000, 2000],
+                        "p": [10, 20],
                         "dist": ["normal", "t"],
                     },
                 ),
@@ -126,6 +127,7 @@ if __name__ == "__main__":
             ],
             "targets": ["beta"],
             "label": label,
+            "allow_cache": False
         }
 
     for (key, dgp_fn, method_fn), label in zip(
@@ -140,10 +142,17 @@ if __name__ == "__main__":
         ],
         ["np_ridge", "jax_ridge", "jax_ridge_jit"],
     ):
-        with function_timer() as sim_timer:
-            _, _, _, plots = run_simulations(
-                key,
-                **make_config(dgp_fn, method_fn, label),
-                simulation_dir="./example/_simulations/",
-            )
-        print(f"{label} simulations took {sim_timer.elapsed_time:.2f} seconds.")
+        timings = []
+        for n_sims in [10, 50, 100, 500, 1000, 2000, 5000]:
+            with function_timer() as sim_timer:
+                _, _, _, plots = run_simulations(
+                    key,
+                    **make_config(dgp_fn, method_fn, label),
+                    simulation_dir="./example/_simulations/",
+                    n_sims=n_sims
+                )
+            print(f"{label} simulations (N_sims={n_sims}) took {sim_timer.elapsed_time:.2f} seconds.")
+            timings.append({"label": label, "n_sims": n_sims, "elapsed_time": sim_timer.elapsed_time})
+        timings_df = pd.concat(timings)
+        pd.to_csv("example/ridge_example_timings.csv", index=False)
+            

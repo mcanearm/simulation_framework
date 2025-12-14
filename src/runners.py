@@ -31,6 +31,7 @@ def run_simulations(
     n_sims: int = 100,
     simulation_dir: Union[Path, str, None] = None,
     label=None,
+    allow_cache: bool = True,
 ) -> tuple[
     MutableMapping[str, ArrayLike],
     MutableMapping[str, ArrayLike],
@@ -85,13 +86,14 @@ def run_simulations(
     # each method on each dataset as it is generated.
 
     data_set = generate_data(
-        data_gen_key, dgp_mapping, n_sims=n_sims, simulation_dir=output_dir
+        data_gen_key, dgp_mapping, n_sims=n_sims, simulation_dir=output_dir, allow_cache=allow_cache
     )
     fitted_methods = fit_methods(
         method_mapping,
         data_dict=data_set,
         simulation_dir=output_dir,
-        prng_key=method_gen_key,
+        prng_key=method_gen_key, 
+        allow_cache=allow_cache,
     )
     evaluations = evaluate_methods(
         evaluators,

@@ -26,13 +26,14 @@ def generate_data(
     n_sims: int,
     simulation_dir: Union[str, Path, None] = None,
     sequential_params: bool = False,
+    allow_cache: bool = True,
 ) -> Union[MutableMapping[str, jax.typing.ArrayLike], dict]:
     data_gen_key = prng_key
     if simulation_dir is not None:
         # add n_sims to the output directory to ensure that different simulation sizes do not overwrite
         # each other from run to run
         output_dir = Path(simulation_dir)
-        data_store = DiskDict(output_dir / "data")  # creates dir if it doesn't exist
+        data_store = DiskDict(output_dir / "data", allow_cache=allow_cache)  # creates dir if it doesn't exist
     else:
         # use a plain dictionary if no data directory is provided
         data_store = dict()

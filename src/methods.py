@@ -78,6 +78,7 @@ def fit_methods(
     data_dict: MutableMapping,
     simulation_dir: Union[Path, str, None] = None,
     prng_key=None,
+    allow_cache: bool = True,
 ) -> MutableMapping[str, jax.typing.ArrayLike]:
     """
     Fit methods over generated data outputs.
@@ -100,7 +101,7 @@ def fit_methods(
         # add n_sims to the output directory to ensure that different simulation sizes do not overwrite
         # each other from run to run
         output_dir = Path(simulation_dir)
-        method_store = DiskDict(output_dir / "methods")
+        method_store = DiskDict(output_dir / "methods", allow_cache=allow_cache)
     else:
         # use a plain dictionary if no data directory is provided
         method_store = dict()
