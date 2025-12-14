@@ -16,7 +16,7 @@ class MetadataCaller(object):
     to modify this existing logic.
 
     The main purpose of this class is wrap an existing function, preserving
-    it's docstring and function signature, but output a namedtuple with
+    its docstring and function signature, but output a namedtuple with
     the specified output fields. When this is done, this serves as a contract
     by which other methods can align inputs and outputs.
 
@@ -28,8 +28,6 @@ class MetadataCaller(object):
         fn (callable): The function to wrap.
         label (str): The label for the function (used in namedtuple).
         output (list[str]): The output field names for the namedtuple.
-    Returns:
-        MetadataCaller: The wrapped function with metadata.
     """
 
     def __init__(self, fn, label, output):
@@ -102,7 +100,7 @@ class Evaluator(MetadataCaller):
 
 class Method(MetadataCaller):
     """
-    Method class to mark evaluation functions in simulation studies.
+    Method class to denote method functions in simulation studies.
     Functionally identical to MetadataCaller, but exists for clarity and
     for future subclassing.
     """
@@ -112,20 +110,6 @@ class Method(MetadataCaller):
 
     def __repr__(self) -> str:
         return f"<Method: {self.label}, output: {self.output}>"
-
-
-class Plotter(MetadataCaller):
-    """
-    Plotter class to mark evaluation functions in simulation studies.
-    Functionally identical to MetadataCaller, but exists for clarity and
-    for future subclassing.
-    """
-
-    def __init__(self, fn, label, output):
-        super().__init__(fn, label, output)
-
-    def __repr__(self) -> str:
-        return f"<Plotter: {self.label}, output: {self.output}>"
 
 
 def dgp(output, label=None):
