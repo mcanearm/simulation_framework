@@ -1,3 +1,5 @@
+from jax._src.pjit import JitWrapped
+from typing import Union
 from src.decorators import DGP
 from src.utils import (
     DiskDict,
@@ -15,10 +17,10 @@ logger = logging.getLogger(__name__)
 
 def generate_data(
     prng_key,
-    dgp_param_map: list[tuple[DGP, dict]],
+    dgp_param_map: list[tuple[DGP | JitWrapped, dict]],
     n_sims: int,
-    simulation_dir=None,
-    sequential_params=False,
+    simulation_dir: Union[str, Path, None] = None,
+    sequential_params: bool = False,
 ):
     data_gen_key, _ = jax.random.split(prng_key, 2)
 

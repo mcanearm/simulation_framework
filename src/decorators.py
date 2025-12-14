@@ -8,6 +8,30 @@ from src.constants import VALID_KEY_NAMES
 
 
 class MetadataCaller(object):
+    """
+    This is the workhorse class for all decorated functions in the simulation
+    study framework, but is never used directly. Instead, we utilize it as a
+    catch all since the specific types of functions (DGPs, Methods, Evaluators, Plotters)
+    have no functional differences for now, but could eventually be subclassed
+    to modify this existing logic.
+
+    The main purpose of this class is wrap an existing function, preserving
+    it's docstring and function signature, but output a namedtuple with
+    the specified output fields. When this is done, this serves as a contract
+    by which other methods can align inputs and outputs.
+
+    These classes are also not invoked directly (though they can be if desired).
+    Instead, the intended use is to use the decorator interface as a factory
+    for these methods.
+
+    Args:
+        fn (callable): The function to wrap.
+        label (str): The label for the function (used in namedtuple).
+        output (list[str]): The output field names for the namedtuple.
+    Returns:
+        MetadataCaller: The wrapped function with metadata.
+    """
+
     def __init__(self, fn, label, output):
         self.fn = fn
         self.label = label
@@ -16,6 +40,12 @@ class MetadataCaller(object):
         update_wrapper(self, fn)
         self.sig = inspect.signature(fn)
         self.output_class = namedtuple(self.label, self.output)
+
+        # NOTE: there is shared logic here with the DGP decorator. If the
+        # method is a DGP, the key MUST be first. Otherwise, the key does not
+        # have to be provided, but if it is, it also MUST be first. This
+        # slightly weird nesting logic should be refactored to avoid
+        # repetition, but it's unclear exactly how to do so elegantly.
 
         if set(self.sig.parameters.keys()).intersection(VALID_KEY_NAMES):
             first_item = list(self.sig.parameters.keys())[0]
@@ -43,6 +73,12 @@ class MetadataCaller(object):
 
 
 class DGP(MetadataCaller):
+    """
+    DGP class to mark data generating processes in simulation studies.
+    Functionally identical to MetadataCaller, but exists for clarity and
+    for future subclassing.
+    """
+
     def __init__(self, fn, label, output):
         super().__init__(fn, label, output)
 
@@ -51,6 +87,12 @@ class DGP(MetadataCaller):
 
 
 class Evaluator(MetadataCaller):
+    """
+    Evaluator class to mark evaluation functions in simulation studies.
+    Functionally identical to MetadataCaller, but exists for clarity and
+    for future subclassing.
+    """
+
     def __init__(self, fn, label, output):
         super().__init__(fn, label, output)
 
@@ -59,6 +101,12 @@ class Evaluator(MetadataCaller):
 
 
 class Method(MetadataCaller):
+    """
+    Method class to mark evaluation functions in simulation studies.
+    Functionally identical to MetadataCaller, but exists for clarity and
+    for future subclassing.
+    """
+
     def __init__(self, fn, label, output):
         super().__init__(fn, label, output)
 
@@ -67,6 +115,12 @@ class Method(MetadataCaller):
 
 
 class Plotter(MetadataCaller):
+    """
+    Plotter class to mark evaluation functions in simulation studies.
+    Functionally identical to MetadataCaller, but exists for clarity and
+    for future subclassing.
+    """
+
     def __init__(self, fn, label, output):
         super().__init__(fn, label, output)
 
@@ -104,9 +158,6 @@ def method(output, label=None):
     Enforce a method contract for simulation studies. Needs to take the output of a DGP as input
     """
 
-    # Slightly different; if the prngkey is an argument, it MUST be first. However,
-    # it is not required.
-
     def outer(fn):
         inner_label = label or fn.__name__
         return Method(fn=fn, label=inner_label, output=output)
@@ -116,25 +167,13 @@ def method(output, label=None):
 
 def evaluator(output, label=None):
     """
-    Enforce an evaluator contract for simulation studies. Designed to take the outputs of evaluators and data generating
-    processes and return designated evaluation metrics.
+    Enforce an evaluator contract for simulation studies. Designed to take the
+    outputs of methods and data generating processes and calculate evaluation
+    metrics.
     """
 
     def outer(fn):
         inner_label = label or fn.__name__
         return Evaluator(fn=fn, label=inner_label, output=output)
-
-    return outer
-
-
-def plotter(output, label=None):
-    """
-    Enforce a plotter contract for simulation studies. Designed to take the outputs of evaluators and/or data generating
-    processes and produce visualizations or plots.
-    """
-
-    def outer(fn):
-        inner_label = label or fn.__name__
-        return Plotter(fn=fn, label=inner_label, output=output)
 
     return outer

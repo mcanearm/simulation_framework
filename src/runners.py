@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 from typing import Union
+from jax._src.pjit import JitWrapped
 import pandas as pd
 
 import jax
@@ -19,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 def run_simulations(
     prng_key: PRNGKeyArray,
-    dgp_mapping: list[tuple[DGP, dict]],
-    method_mapping: list[tuple[Method, dict]],
+    dgp_mapping: list[tuple[DGP | JitWrapped, dict]],
+    method_mapping: list[tuple[Method | JitWrapped, dict]],
     evaluators: list[Evaluator],
     targets: list[str],
     plotters: object | list[object] | None = None,

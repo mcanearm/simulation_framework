@@ -13,27 +13,52 @@ import warnings
 
 @evaluator(output="rmse")
 def rmse(true, target):
+    """
+    Standard RMSE evaluator.
+    """
     return jnp.sqrt(jnp.mean((true - target) ** 2))
 
 
 @evaluator(output="bias")
 def bias(true, target):
+    """
+    Standard bias function.
+    """
     return jnp.mean(target - true)
 
 
 @evaluator(output="mae")
 def mae(true, target):
+    """
+    Standard MAE function.
+    """
     return jnp.mean(jnp.abs(target - true))
 
 
 @evaluator(output="coverage", label="Coverage")
 def coverage(true, target, sd, alpha=0.95):
+    """
+    Calculate coverage based on assumed normal confidence intervals.
+    """
     low = target - sd * jax.scipy.stats.norm.ppf(1 - alpha / 2)
     high = target + sd * jax.scipy.stats.norm.ppf(1 - alpha / 2)
     return jnp.mean((true >= low) & (true <= high))
 
 
 def _get_stack_of_estimates(method_output: list[NamedTuple], target):
+    """
+    Helper function to retrieve particular estimates for each method. For example,
+    if each method outputs an object "beta_hat", then this creates a stack of beta estimates.
+
+    For example, suppose we run 100 simulations for 5 coefficients across 3
+    methods. This function will return a 3x100x5 tensor of beta_hat estimates.
+
+    Args:
+        method_output (list[NamedTuple]): The list of method output objects.
+        target (str): The target variable name to extract (e.g., "beta").
+    Returns:
+        jnp.ndarray: A stacked array of estimates for the target variable.
+    """
     method_output_fields = (
         method_output[0]._fields
         if isinstance(method_output, list)
@@ -62,6 +87,24 @@ def evaluate_methods(
     simulation_dir=None,
     prng_key=None,  # not used, but could be for things like bootstrap methods
 ) -> pd.DataFrame:
+    """
+    Evaluate fitted methods against true data using specified evaluators.
+    Args:
+        evaluators (Evaluator | list[Evaluator]): The evaluator function(s) to use.
+        data_dict (MutableMapping): The dictionary of generated data objects.
+        method_dict (MutableMapping): The dictionary of fitted method outputs.
+        targets (str | list[str]): The target variable(s) to evaluate.
+        simulation_dir (str | Path | None): Directory to save evaluation results.
+        prng_key: Not used currently.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing evaluation results.
+
+    Note: This function assumes that the output of any particular evaluator will be
+    a single value (e.g., RMSE, bias). If an evaluator returns multiple values,
+    this function may need to be adjusted accordingly.
+    """
+
     if not isinstance(evaluators, (list, tuple)):
         evaluators = [evaluators]
 
@@ -99,12 +142,15 @@ def evaluate_methods(
                     get_params_from_scenario_keystring(method_key)
                     for method_key in method_keys
                 ]
+                # TODO: this assumes the output of the evaluator is a single value.
+                # If it is multiple, we need to expand this to assign each output
+                # feature separately, with an appropriate name. This should mirror
+                # the Method class pretty closely.
             ).assign(
                 target=target,
                 evaluator=evaluator_fn.label,
                 value=getattr(evaluations, evaluator_fn.output),
             )
-            # BUG: this assumes the output of the evaluator is a single value. Maybe that's ok.
             eval_frames.append(output_data)
 
     eval_df = pd.concat(eval_frames)
