@@ -62,8 +62,8 @@ def generate_data(
 
         try:
             data_gen_key, _ = jax.random.split(prng_key, 2)
-        # if attributeError, this is a numpy RNG style and we keep going
         except TypeError:
+            # if TypeError, this is a numpy RNG style and we keep going
             pass
 
         dgp_fn, dgp_args = scenario

@@ -39,7 +39,6 @@ def linear_data_jax(prng_key, n=100, p=10, noise=1.0, dist="normal"):
         noise = jax.random.normal(prng_key, shape=(n,)) * noise
     elif dist == "t":
         noise = jax.random.t(prng_key, df=3, shape=(n,)) * noise
-    noise = jax.random.normal(prng_key, shape=(n,)) * 0.5
     y = X @ true_beta + noise
     return X, y, true_beta
 

@@ -134,9 +134,8 @@ def fit_methods(
                         # split the provided key and overwrite it for the next method
                         # if one is required
                         method_fit_key, prng_key = jax.random.split(method_fit_key, 2)
-                    # TODO: modify to be real exception later
-                    # if attributeError, this is a numpy RNG style and we keep going
                     except TypeError:
+                        # if attributeError, this is a numpy RNG style and we keep going
                         pass
                     except Exception as e:
                         raise ValueError(
