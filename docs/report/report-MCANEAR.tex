@@ -1,0 +1,319 @@
+\documentclass[10pt]{article}
+
+% \usepackage{appendixnumberbeamer}
+% \usepackage{tikz}
+
+% \usepackage{booktabs}
+
+% \usepackage{xspace}
+% \newcommand{\themename}{\textbf{\textsc{metropolis}}\xspace}
+
+\usepackage[backend=biber,style=numeric]{biblatex}
+\addbibresource{bibliography.bib}
+
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{graphicx}
+
+\lstdefinestyle{mypython}{
+  language=Python,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue}\bfseries,
+  stringstyle=\color{red},
+  commentstyle=\color{gray},
+  showstringspaces=false,
+  breaklines=true,
+  columns=fullflexible,
+}
+
+\lstset{style=mypython}
+
+\def\code#1{\texttt{#1}}
+
+% \bibliography{gpr}
+
+\title{Simulation Framework: First approach at a Python-first General Simulation Package}
+\author{Matt McAnear}
+\date{\today}
+% \author{Matt McAnear}
+% \institute[UofM]{Dept. of Statistics, University of Michigan}
+
+
+% \titlegraphic{\hfill\includegraphics[height=1.5cm]{logo.pdf}}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+I have implemented a small simulation framework in Python that takes arbitrary
+user functions written with \code{NumPy}\cite{harris2020array} or \code{JAX}\cite{bradbury_jax_2018}
+and manages simulation outputs. The 
+package mainly deals with reproducibility through explicit randomization, 
+data file storage and caching, method comparison and evaluation, and has 
+limited visualization capabilities.
+
+\subsection{Motivation}
+
+Simulation studies often come with a lot of boilerplate code that can be shared
+across projects. R packages like \code{simChef} and \code{simulator} provide functionality
+to handle this, but Python lacks similar tools. This package aims to fill that
+gap in a Pythonic manner. 
+
+The main beneficiaries of the package are users who are conducting simulation
+studies in JAX. Most of the package's special implementations are built
+around this framework, though users may supply \code{NumPy} functions. However,
+these functions generally won't benefit from exceptional speedup
+under this version of the package, for reasons that will explored a bit later.
+
+
+\section{Description}
+
+The simluation framework (so far untitled formally) consists of components
+that roughly align with thir R counterparts \cite{bien_simulator_2016}, \cite{green_simr_2016}, \cite{duncan_simchef_2024}:
+
+\begin{enumerate}
+    \item Data Generating Processes (DGPs)
+    \item Methods
+    \item Evaluators
+    \item Plotters
+\end{enumerate}
+
+\section{Architecture}
+
+These system components are tied together with the \code{run\_simulations} function,
+which is invoked through a relatively simple mapping of functions with a 
+dictionary of parameters. Users of \code{scikit-learn} should find the structure 
+eminently familiar, as we use a list of tuples, though we've opted to attach a
+label to the object itself, rather than have the user pass it in.
+
+An example usage of the entire pipeline is shown below, but can be found in 
+greater detail in \code{./docs/examples/ridge\_example.py}.
+
+\begin{lstlisting}{python}
+
+### example usage
+data, methods, evaluations, plots = run_simulations(
+    key,
+    dgp_mapping=[
+        (data_fn, {
+            "n": [100, 200],
+            "p": [5, 10, 20, 50],
+            "dist": ["normal", "t"],
+        },)
+    ],
+    method_mapping=[
+        (method_fn, {"alpha": [0.01, 0.1, 0.5, 1.0, 2.0]}),
+    ],
+    evaluators=[rmse, bias, mae],
+    plotters=[
+        (rmse, create_plotter_fn(
+            x="p",
+            hue="method",
+            col="dist",
+            plot_class=sns.lineplot,
+        )),
+        # other plotters,
+    ],
+    targets=["beta"],
+    n_sims=50,
+    simulation_dir=tmpdir / "example",
+    label="my_simulation",
+    # this is actually just for labelling, as the "key" sets the randomization
+    seed=42 
+)
+\end{lstlisting}
+
+To build this pipeline we have several helper functions the bridge between each
+step, with the main goal being to "automatically" utilize the outputs of
+one function as the input to another function through a  
+decorator. In practice, this is a relatively simple affair that only
+requires users to annotate their functions with the names of their outputs
+and then utilize those same names for the inputs of methods.
+
+For example, consider the following data generating process and model specification:
+
+\begin{lstlisting}{python}
+@dgp(outputs=["X", "y", "beta"], label="LinearRegressionDGP")
+def linear_dgp(key, n, p, dist="normal"):
+    """Generates data from a linear regression model."""
+    key, subkey = jax.random.split(key)
+    # logic
+    return X, y, beta
+    
+@method(outputs="beta_hat", label="OLS")
+def ols_regression(X, y):
+    beta_hat = jnp.linalg.inv(X.T @ X) @ X.T @ y
+    return beta_hat
+   
+\end{lstlisting}
+
+These functions work exactly as before, but the \code{ols\_regression} function 
+has a input arguments \code{X, y} and the DGP \code{linear\_dgp} has output arguments
+\code{X, y}, so these are matched together automatically by the package. Since
+the DGP also has the output \code{beta} and the method has the output \code{beta\_hat},
+these are matched by the overlapping string \code{beta}, and the evaluator
+computes metrics based on this pairing for specified evaluators.
+
+\subsection{Vectorization}
+
+\code{JAX} has a powerful \code{vmap} API that allows us to arbitrarily and 
+efficiently vectorize functions so that users do not have to worry about 
+proper vectorization to the same degree. This package simplifies replication
+by expanding outputs into higher dimensional tensor objects and then
+iterating over the leading index. This is done through simple assumptions: 
+
+\begin{enumerate}
+    \item The first argument of a data generating process is always a \code{jax.random.PRNGKey} object.
+    \item The output arguments of a DGP are batched in the first index.
+    \item All other arguments are copied across batches.
+\end{enumerate}
+
+Therefore, we use a simple function generate the appropriate \code{in\_args} argument
+for \code{jax.vmap} that consists of a tuple of \code{0}'s and \code{None}'s that indicate
+which arguments should be vectorized over the leading index. This surprisingly
+powerful abstraction is unfortunately not available in \code{NumPy} to the
+same degree, as I haven't yet figured out a way to broadcast arbitrary functions
+in the same way. This limits the effectiveness of the \code{NumPy} imlementation.
+
+For example, the data-generating process above could be easily written in 
+\code{NumPy} to simply generate a single, 3D array of shape \code{(n\_sims, n, p)},
+but looping over the method fitting may still be unavoiable for arbitrary functions.
+
+The reality of JAX is that, at some level, you can get higher performance code
+that is, if not sloppier, perhaps less elegant in an approach. You can write a
+straightforward loop that iterates over replications that is slow for smaller 
+batches, but for larger ones, you face extremely gradual returns to scale.
+
+\subsection{Evaluation}
+
+For now, we have some simplifying API assumptions on the `Evaluator` class and
+`evaluator` decorator, namely that the output of each evaluator is a scalar. 
+This is not ideal, nor is it a requirement of the package. Because of JAX's
+automatic vectorization in fact, `vmap` can return outputs
+of arbitrary dimensions, even utilizing tuple collections in Python for
+better organization of results. 
+
+The evaluation results of the methods are stored in a \code{pandas.DataFrame} object,
+and are invoked through the \code{evaluate\_methods} function. This function takes
+the outputs of the methods and data generating processes and computes 
+evaluation metrics for the targets specified by the user.
+
+\subsection{Plotting}
+
+Rudimentary plotting capabilities are included via
+the \code{create\_plotter\_fn} function. Notably, this component is missing a decorator
+interface, but this is intentional; the plotting is arbitrary enough that
+given a particular plotting function (e.g., \code{seaborn.lineplot}), and target,
+users can effectively loop a plotter over different metrics. 
+Arbitrary arguments are passed to \code{seaborn}'s \code{FacetGrid} class.
+
+\begin{figure}
+\includegraphics[width=\textwidth]{./images/rmse_beta_alpha_vs_rmse.png}
+\caption{Example output plot. It's very basic currently.}
+\end{figure}
+
+Any callable should work here, as long as it takes a \code{pandas.DataFrame} meets
+the signature requirements, which we may assert in the \code{evaluator} decorator. 
+
+\subsection{Caching}
+
+The major beneefit the package gives is an "invisible" caching layer that 
+prevents data recalculation or method refitting. The \code{DataDict} class provides this
+functionality for arbitrary Python objects and uses the \code{dill} library for 
+serialization. The \code{ImageDict} class does the same, but specializes
+in saving images. 
+
+\section{Results}
+
+There is a clear tradeoff between the use of \code{NumPy} and \code{JAX} functions
+in this package. \code{JAX} is generally faster for larger
+data sizes, but the overhead of compilation and device management means that
+for smaller data sizes \code{NumPy} is often faster. Below are some timing results
+for fitting a ridge regression model with varying data sizes and replications.
+
+\begin{figure}
+\includegraphics[width=\textwidth]{./images/simulation_timings.png}
+\caption{Timing results for fitting ridge regression models with varying data sizes and replications, both on and off a GPU. The GPU is not always better, and in fact, my local Mac was always faster.}
+\end{figure}
+
+% ![Timing Results](./simulation_timings.png)
+
+To achieve these timings, I ran the package on my home server, 
+with an AMD cpu and an NVidia Geforce RTX 2060 GPU. The GPU is
+showing its age, but still, the results demonstrate that after
+only 100 replications of fitting the ridge regression model on 
+each of 40 configurations, \code{JAX} is able to outperform \code{NumPy}.
+
+More surprisingly, these returns to scale are still realized
+on CPU alone, though the speedup is less pronounced. Using
+my local laptop, I found that `JAX` began to outperform `NumPy`
+after about 1000 replications of fitting the ridge regression
+models. 
+
+These results are based around fairly
+subpar `NumPy` code for fitting ridge regression models, as the \code{NumPy} 
+implementation loops over the first index dimension in a list comprehension. 
+Still, for cases when users are writing arbitrary functions that may not be easily vectorizable,
+this package provides a gentle wrapper around `JAX` that allows faster
+code execution with fairly minimal setup and Pythonic style.
+
+\section{Lessons Learned}
+
+\subsection{Challenges}
+
+\begin{enumerate}
+    \item Figuring out how to store metadata on functions without disrupting their signatures or usability
+    \item Keeping the API contract light. The more requirements we place on users, the less likely they are to use the package. 
+    \item Logic for automatic caching
+    \item Efficient higher dimension vectorization
+    \item Useful plotting.
+    \item Type hinting and annotations across decorators and pipelines.
+\end{enumerate}
+
+
+\subsection{Course Impact}
+
+The biggest change from the course was my gradual emphasis on testing and 
+reproducibility. Rigorous adherence to the unit tests prevented me from 
+making breaking changes to the API and forced me to really encode the API from
+the start. Adding the `NumPy` functionality only took a couple of 
+hours because of this emphasis.
+
+Next was an emphasis on modularity. Generally in statistics courses I have let 
+my commitment to software engineering principals wane to focus on the math. Here,
+I worked very hard to make sure each function was doing one and only one thing. 
+The separation of responsibility made it easier to reason about the code
+and keep the pipeline intact.
+
+Finally, the concept of a simulation framework was brought up early in the 
+course. As I started the project I was sort of skeptical that it would be 
+useful, but as I've worked on it, it really does allow me to stop focusing on 
+things like saving outputs, caching inputs, and allows me to focus on the 
+actual research. I'm excited to keep expanding this and get it out of MVP 
+stage and maybe somewhere more useful.
+
+\section{Future Work}
+
+There are several improvements that could be made to the package in future work.
+
+First, a post-processing step or a general "Pipeline" class. I didn't reimplement
+my previous project paper because it was three methods, two of which required 
+the outputs of the first method. Here, the data generating process outputs data,
+the method fits the model, and then we evaluate. But if we wanted to utilize
+the outputs of one method in another method, that is impossible in the current
+setup. 
+
+Second, adding more evaluation metrics and default plots, specifically ones that don't
+require full scale aggregation. What about intervals and zipper plots, for
+example? Those are theoretically possible under the framework, but I haven't explored
+this fully.
+
+Lastly, improving the \code{NumPy} functionality. Right now, it's a second class
+citizen, and performance improvements may be possible by utilizing something 
+like a \code{Numba} pipeline path as a complement or alternative to \code{JAX}. 
+
+\printbibliography
+
+\end{document}
