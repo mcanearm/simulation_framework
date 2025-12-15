@@ -2,15 +2,11 @@ import jax
 import pandas as pd
 import numpy as np
 from jax import numpy as jnp
-from pathlib import Path
 
 from src.decorators import method, dgp
 from src.utils import function_timer
 from src.evaluators import rmse, bias
 from src.runners import run_simulations
-from src.plotters import create_plotter_fn
-
-import seaborn as sns
 
 
 @method(output="beta_hat", label="Ridge")
@@ -103,34 +99,10 @@ if __name__ == "__main__":
                 (method, {"alpha": [0.001, 0.01, 0.1, 1.0, 10.0]}),
             ],
             "evaluators": [rmse, bias],
-            "plotters": [
-                (
-                    rmse,
-                    create_plotter_fn(
-                        sns.lineplot,
-                        x="alpha",
-                        hue="dist",
-                        row="n",
-                        col="p",
-                        log_scale=True,
-                    ),
-                ),
-                (
-                    bias,
-                    create_plotter_fn(
-                        sns.lineplot,
-                        x="alpha",
-                        hue="dist",
-                        row="n",
-                        col="p",
-                        log_scale=False,
-                    ),
-                ),
-            ],
             "targets": ["beta"],
             "label": label,
             "allow_cache": False,
-            "seed": seed  # add a seed label
+            "seed": seed,  # add a seed label
         }
 
     for (key, dgp_fn, method_fn), label in zip(
@@ -146,19 +118,25 @@ if __name__ == "__main__":
         ["np_ridge", "jax_ridge", "jax_ridge_jit"],
     ):
         timings = []
-        output_file_name = Path(f"example/{label}_timings.csv")
-        if output_file_name.exists():
-            continue
-        for n_sims in [10, 50, 100, 500, 1000]:
+        device = jax.devices()[0].device_kind
+        for n_sims in [10, 50, 100, 500, 1000, 2000, 5000]:
             with function_timer() as sim_timer:
                 _, _, _, plots = run_simulations(
                     key,
                     **make_config(dgp_fn, method_fn, label),
                     simulation_dir="./example/_simulations/",
-                    n_sims=n_sims
+                    n_sims=n_sims,
                 )
-            print(f"{label} simulations (N_sims={n_sims}) took {sim_timer.elapsed_time:.2f} seconds.")
-            timings.append({"label": label, "n_sims": n_sims, "elapsed_time": sim_timer.elapsed_time})
-        timings_df = pd.DataFrame(timings)
-        timings_df.to_csv(f"example/{label}_timings.csv", index=False)
-            
+            print(
+                f"{label} simulations (N_sims={n_sims}) took {sim_timer.elapsed_time:.2f} seconds."
+            )
+            timings.append(
+                {
+                    "label": label,
+                    "device": device,
+                    "n_sims": n_sims,
+                    "elapsed_time": sim_timer.elapsed_time,
+                }
+            )
+    timings_df = pd.DataFrame(timings)
+    timings_df.to_csv("example/timings.csv", index=False)
