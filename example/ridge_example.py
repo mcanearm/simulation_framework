@@ -3,10 +3,12 @@ import numpy as np
 import pandas as pd
 from jax import numpy as jnp
 
+import seaborn as sns
 from src.decorators import dgp, method
 from src.evaluators import bias, rmse
 from src.runners import run_simulations
 from src.utils import function_timer
+from src.plotters import create_plotter_fn
 
 
 @method(output="beta_hat", label="Ridge")
@@ -78,9 +80,9 @@ def np_ridge(X, y, alpha=0.1):
 
 
 if __name__ == "__main__":
-    seed = 20250607
-    k1, k2 = jax.random.split(jax.random.key(20250607), 2)
-    np_rng = np.random.default_rng(20250607)
+    seed = 2141
+    k1, k2 = jax.random.split(jax.random.key(seed), 2)
+    np_rng = np.random.default_rng(seed)
 
     def make_config(dgp, method, label):
         return {
@@ -96,6 +98,30 @@ if __name__ == "__main__":
             ],
             "method_mapping": [
                 (method, {"alpha": [0.001, 0.01, 0.1, 1.0, 10.0]}),
+            ],
+            "plotters": [
+                (
+                    rmse,
+                    create_plotter_fn(
+                        sns.lineplot,
+                        x="alpha",
+                        hue="dist",
+                        row="n",
+                        col="p",
+                        log_scale=True,
+                    ),
+                ),
+                (
+                    bias,
+                    create_plotter_fn(
+                        sns.lineplot,
+                        x="alpha",
+                        hue="dist",
+                        row="n",
+                        col="p",
+                        log_scale=False,
+                    ),
+                ),
             ],
             "evaluators": [rmse, bias],
             "targets": ["beta"],
@@ -117,6 +143,8 @@ if __name__ == "__main__":
         ],
         ["np_ridge", "jax_ridge", "jax_ridge_jit"],
     ):
+        if label == "np_ridge":
+            continue
         device = jax.devices()[0].device_kind
         for n_sims in [10, 50, 100, 500, 1000, 2000, 5000]:
             with function_timer() as sim_timer:

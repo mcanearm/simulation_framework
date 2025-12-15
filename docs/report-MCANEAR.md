@@ -279,6 +279,11 @@ provides a gentle wrapper around `JAX` that allows faster
 code execution with fairly minimal setup and familiar, Pythonic
 style.
 
+But regardless, the output of the simulation runs gives you a `pandas` data frame
+and a set of amateurish (for now) plots that can summarize your results.
+
+![RMSE Plot](./rmse_beta_alpha_vs_rmse.png)
+
 To run the demo yourself, you may run the file at `./example/ridge_example.py`.
 
 # Lessons Learned
