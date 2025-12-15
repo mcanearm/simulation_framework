@@ -2,6 +2,7 @@ import matplotlib as mpl
 import pandas as pd
 from matplotlib import pyplot as plt
 
+# note - this prevents the splots from rendering to screen
 mpl.use("Agg")  # 'Agg'
 
 import logging
