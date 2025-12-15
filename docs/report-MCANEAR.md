@@ -301,11 +301,43 @@ There were a myriad of challenges in getting this package together, listed as fo
 
 ## How the Approach Changed from the Course
 
-The biggest change from the course was my gradual emphasis on testing and reproducibility. It was tempting to write code and keep running the same test over and over, but instead, I really stuck with writing tests for functionality as I wrote it. Then, it meant that when I added new functionality, I could go back and adapt quickly. Adding the `NumPy` functionality only took a couple of hours because of this emphasis.
+The biggest change from the course was my gradual emphasis on testing and 
+reproducibility. It was tempting to write code and keep running the same test 
+over and over, but instead, I really stuck with writing tests for functionality 
+as I wrote it. Then, it meant that when I added new functionality, I could go 
+back and adapt quickly. Adding the `NumPy` functionality only took a couple of 
+hours because of this emphasis.
 
-Next, an emphasis on modularity. I have always tried to have this in my code, but generally in statistics courses I have let my software engineering experience and effort wane slightly. Here, I worked very hard to make sure each function was doing one and only one thing. The separation of responsibility made things much easier.
+Next, an emphasis on modularity. I have always tried to have this in my code, 
+but generally in statistics courses I have let my commitment to software 
+engineering principals wane slightly. Here, I worked very hard to make sure 
+each function was doing one and only one thing. The separation of 
+responsibility made things much easier.
 
-Finally, the concept of a simulation framework was brought up early in the course. As I started the project I was sort of skeptical
-that it would be useful, but as I've worked on it, it really does allow me to stop focusing on things like saving outputs,
-caching inputs, and allows me to focus on the actual research. I'm excited to keep expanding this and get it out of MVP 
+Finally, the concept of a simulation framework was brought up early in the 
+course. As I started the project I was sort of skeptical that it would be 
+useful, but as I've worked on it, it really does allow me to stop focusing on 
+things like saving outputs, caching inputs, and allows me to focus on the 
+actual research. I'm excited to keep expanding this and get it out of MVP 
 stage and maybe somewhere more useful.
+
+# Future Work
+
+I think the package has a lot of potential for future development.
+
+First, a post-processing step or a general "Pipeline" class. I didn't reimplement
+my previous project paper because it was three methods, two of which required 
+the outputs of the first method. Here, the data generating process outputs data,
+the method fits the model, and then we evaluate. But if we wanted to utilize
+the outputs of one method in another method, that is impossible in the current
+setup. It would be worth tackling.
+
+Second, adding more evaluation metrics and default plots, specifically ones that don't
+require full scale aggregation. What about intervals and zipper plots, for
+example? Those are theoretically possible under the framework, but I haven't
+
+Lastly, improving the NumPy functionality. Right now, it's a second class
+citizen, and I wonder if it's possible to make it more performance in general, 
+possibly by utilizing something like a `Numba` pipeline path as a complement
+or alternative to `JAX`. This is tempting because `Numba` actually works well
+with for loops.
