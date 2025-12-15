@@ -10,7 +10,7 @@ from src.evaluators import bias, mae, rmse
 from src.plotters import create_plotter_fn
 from src.runners import run_simulations
 
-my_key = jax.random.PRNGKey(0)
+my_key = jax.random.key(0)
 rng = np.random.default_rng(0)
 
 

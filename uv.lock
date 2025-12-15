@@ -1069,7 +1069,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "dill" },
-    { name = "jax", extra = ["cuda"] },
+    { name = "jax" },
     { name = "jaxtyping" },
     { name = "matplotlib" },
     { name = "numpy" },
@@ -1094,7 +1094,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "dill", specifier = ">=0.4.0" },
-    { name = "jax", extras = ["cuda"], specifier = ">=0.8.1" },
+    { name = "jax", specifier = ">=0.8.1" },
     { name = "jax", extras = ["cuda"], marker = "extra == 'cuda'", specifier = ">=0.8.1" },
     { name = "jaxtyping", specifier = ">=0.3.3" },
     { name = "matplotlib", specifier = ">=3.10.8" },
@@ -1109,7 +1109,7 @@ requires-dist = [
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "xarray", specifier = ">=2025.12.0" },
 ]
-provides-extras = ["dev", "cuda"]
+provides-extras = ["dev", "cuda", "mac"]
 
 [[package]]
 name = "six"

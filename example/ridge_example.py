@@ -105,6 +105,7 @@ if __name__ == "__main__":
             "seed": seed,  # add a seed label
         }
 
+    timings = []
     for (key, dgp_fn, method_fn), label in zip(
         [
             (np_rng, linear_data_np, np_ridge),
@@ -117,7 +118,6 @@ if __name__ == "__main__":
         ],
         ["np_ridge", "jax_ridge", "jax_ridge_jit"],
     ):
-        timings = []
         device = jax.devices()[0].device_kind
         for n_sims in [10, 50, 100, 500, 1000, 2000, 5000]:
             with function_timer() as sim_timer:
