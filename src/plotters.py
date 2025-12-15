@@ -1,16 +1,17 @@
-from matplotlib import pyplot as plt
-import pandas as pd
 import matplotlib as mpl
+import pandas as pd
+from matplotlib import pyplot as plt
 
 mpl.use("Agg")  # 'Agg'
 
-import seaborn as sns
-from pathlib import Path
 import logging
-from src.utils import ImageDict
-from src.decorators import Evaluator
+from pathlib import Path
 from typing import Callable, Union
 
+import seaborn as sns
+
+from src.decorators import Evaluator
+from src.utils import ImageDict
 
 logger = logging.getLogger(__name__)
 

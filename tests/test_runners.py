@@ -1,11 +1,12 @@
-import pytest
 from collections.abc import MutableMapping
+
+import pandas as pd
+import pytest
 from jax import numpy as jnp
 
+from example.ridge_example import jax_ols, jax_ridge, linear_data_jax
+from src.evaluators import bias, rmse
 from src.runners import run_simulations
-from src.evaluators import rmse, bias
-from example.ridge_example import jax_ridge, jax_ols, linear_data_jax
-import pandas as pd
 
 
 def test_sim_repeat(key, tmpdir):

@@ -5,9 +5,9 @@ import jax
 import pytest
 from jax import numpy as jnp
 
+from example.ridge_example import jax_ridge
 from src.constants import VALID_KEY_NAMES
 from src.decorators import dgp, method
-from example.ridge_example import jax_ridge
 from tests.conftest import norm_data
 
 

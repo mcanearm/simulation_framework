@@ -1,5 +1,5 @@
-from collections import namedtuple
 import inspect
+from collections import namedtuple
 from functools import update_wrapper
 
 from jaxtyping import Array

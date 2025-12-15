@@ -1,12 +1,14 @@
-from src.runners import run_simulations
-from example.ridge_example import jax_ridge, linear_data_jax, linear_data_np, np_ridge
-from src.evaluators import rmse, bias, mae
-from src.plotters import create_plotter_fn
-import seaborn as sns
 from pathlib import Path
-import pytest
+
 import jax
 import numpy as np
+import pytest
+import seaborn as sns
+
+from example.ridge_example import jax_ridge, linear_data_jax, linear_data_np, np_ridge
+from src.evaluators import bias, mae, rmse
+from src.plotters import create_plotter_fn
+from src.runners import run_simulations
 
 my_key = jax.random.PRNGKey(0)
 rng = np.random.default_rng(0)

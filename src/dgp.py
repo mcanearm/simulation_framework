@@ -1,6 +1,14 @@
-from jax._src.pjit import JitWrapped
-import numpy as np
+import logging
+from collections.abc import MutableMapping
+from functools import singledispatch
+from pathlib import Path
 from typing import Union
+
+import jax
+import numpy as np
+import tqdm
+from jax._src.pjit import JitWrapped
+
 from src.decorators import DGP
 from src.utils import (
     DiskDict,
@@ -8,13 +16,6 @@ from src.utils import (
     create_vmap_signature,
     generate_scenarios,
 )
-from collections.abc import MutableMapping
-from pathlib import Path
-import jax
-import tqdm
-import logging
-
-from functools import singledispatch
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,9 @@ def generate_data(
         # add n_sims to the output directory to ensure that different simulation sizes do not overwrite
         # each other from run to run
         output_dir = Path(simulation_dir)
-        data_store = DiskDict(output_dir / "data", allow_cache=allow_cache)  # creates dir if it doesn't exist
+        data_store = DiskDict(
+            output_dir / "data", allow_cache=allow_cache
+        )  # creates dir if it doesn't exist
     else:
         # use a plain dictionary if no data directory is provided
         data_store = dict()

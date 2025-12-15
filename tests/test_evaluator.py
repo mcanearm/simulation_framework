@@ -1,10 +1,11 @@
-from example.ridge_example import jax_ridge, jax_ols, linear_data_jax
-from src.evaluators import rmse, evaluate_methods, mae, bias
-import pytest
-from src.methods import fit_methods
-from src.dgp import generate_data
-import pandas as pd
 import jax
+import pandas as pd
+import pytest
+
+from example.ridge_example import jax_ols, jax_ridge, linear_data_jax
+from src.dgp import generate_data
+from src.evaluators import bias, evaluate_methods, mae, rmse
+from src.methods import fit_methods
 
 
 @pytest.fixture(scope="module")

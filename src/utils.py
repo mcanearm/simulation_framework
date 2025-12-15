@@ -1,23 +1,21 @@
+import logging
 from collections.abc import MutableMapping
 from dataclasses import dataclass
+from functools import singledispatch
+from hashlib import md5
 from inspect import BoundArguments
 from itertools import product
 from pathlib import Path
 from time import time
-import logging
-import jax
-import numpy as np
-from hashlib import md5
-
-from matplotlib import pyplot as plt
 
 import dill
+import jax
+import numpy as np
 from jax._src.pjit import JitWrapped
 from jaxtyping import PRNGKeyArray
+from matplotlib import pyplot as plt
 
-from src.decorators import MetadataCaller
-from src.decorators import DGP, Method
-from functools import singledispatch
+from src.decorators import DGP, MetadataCaller, Method
 
 logger = logging.getLogger(__name__)
 

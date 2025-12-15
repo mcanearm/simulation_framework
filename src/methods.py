@@ -1,8 +1,13 @@
-from jax._src.pjit import JitWrapped
-import jax.typing
-import jax
-from pathlib import Path
 from collections.abc import MutableMapping
+from pathlib import Path
+from typing import Union
+
+import jax
+import jax.typing
+import numpy as np
+import tqdm
+from jax._src.pjit import JitWrapped
+
 from src.decorators import Method
 from src.utils import (
     DiskDict,
@@ -10,9 +15,6 @@ from src.utils import (
     create_vmap_signature,
     generate_scenarios,
 )
-from typing import Union
-import tqdm
-import numpy as np
 
 
 def _execute(method_fn, method_input_args, method_kwargs, prng_key=None):

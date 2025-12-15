@@ -1,10 +1,10 @@
-import pytest
 import dill
 import jax
+import pytest
 from jax import numpy as jnp
 
-from src.utils import DiskDict, function_timer, key_to_str, generate_scenarios
 from example.ridge_example import linear_data_jax
+from src.utils import DiskDict, function_timer, generate_scenarios, key_to_str
 
 
 def test_timer():

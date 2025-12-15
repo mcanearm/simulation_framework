@@ -1,12 +1,12 @@
 import jax
-import pandas as pd
 import numpy as np
+import pandas as pd
 from jax import numpy as jnp
 
-from src.decorators import method, dgp
-from src.utils import function_timer
-from src.evaluators import rmse, bias
+from src.decorators import dgp, method
+from src.evaluators import bias, rmse
 from src.runners import run_simulations
+from src.utils import function_timer
 
 
 @method(output="beta_hat", label="Ridge")

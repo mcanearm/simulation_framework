@@ -1,10 +1,11 @@
-import pytest
-from src.dgp import generate_data
-from example.ridge_example import linear_data_jax, linear_data_np
 from collections.abc import MutableMapping
+
 import jax
 import numpy as np
+import pytest
 
+from example.ridge_example import linear_data_jax, linear_data_np
+from src.dgp import generate_data
 
 jax_key = jax.random.key(0)
 np_rng = np.random.default_rng(0)

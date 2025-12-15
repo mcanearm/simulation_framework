@@ -1,22 +1,20 @@
 import logging
+from collections.abc import MutableMapping
 from pathlib import Path
-from typing import Union
-from jax._src.pjit import JitWrapped
-import pandas as pd
-import numpy as np
-from typing import Callable
+from typing import Callable, Union
 
 import jax
-from jaxtyping import PRNGKeyArray, ArrayLike
+import numpy as np
+import pandas as pd
+from jax._src.pjit import JitWrapped
+from jaxtyping import ArrayLike, PRNGKeyArray
 
 from src.decorators import DGP, Evaluator, Method
-from src.utils import key_to_str
 from src.dgp import generate_data
-from src.methods import fit_methods
 from src.evaluators import evaluate_methods
+from src.methods import fit_methods
 from src.plotters import plot_results
-from collections.abc import MutableMapping
-
+from src.utils import key_to_str
 
 logger = logging.getLogger(__name__)
 
@@ -87,13 +85,17 @@ def run_simulations(
     # each method on each dataset as it is generated.
 
     data_set = generate_data(
-        data_gen_key, dgp_mapping, n_sims=n_sims, simulation_dir=output_dir, allow_cache=allow_cache
+        data_gen_key,
+        dgp_mapping,
+        n_sims=n_sims,
+        simulation_dir=output_dir,
+        allow_cache=allow_cache,
     )
     fitted_methods = fit_methods(
         method_mapping,
         data_dict=data_set,
         simulation_dir=output_dir,
-        prng_key=method_gen_key, 
+        prng_key=method_gen_key,
         allow_cache=allow_cache,
     )
     evaluations = evaluate_methods(

@@ -1,8 +1,9 @@
+import numpy as np
 import pytest
+
 from example.ridge_example import jax_ridge, linear_data_jax, linear_data_np, np_ridge
 from src.dgp import generate_data
 from src.methods import fit_methods
-import numpy as np
 
 
 # TODO: it seems like a problem that I have to share n_sims across the entire chain; shouldn't
