@@ -2,6 +2,7 @@ import jax
 import pandas as pd
 import numpy as np
 from jax import numpy as jnp
+from pathlib import Path
 
 from src.decorators import method, dgp
 from src.utils import function_timer
@@ -82,6 +83,7 @@ def np_ridge(X, y, alpha=0.1):
 
 
 if __name__ == "__main__":
+    seed = 20250607
     k1, k2 = jax.random.split(jax.random.key(20250607), 2)
     np_rng = np.random.default_rng(20250607)
 
@@ -91,7 +93,7 @@ if __name__ == "__main__":
                 (
                     dgp,
                     {
-                        "n": [1000, 2000],
+                        "n": [100, 200],
                         "p": [10, 20],
                         "dist": ["normal", "t"],
                     },
@@ -127,7 +129,8 @@ if __name__ == "__main__":
             ],
             "targets": ["beta"],
             "label": label,
-            "allow_cache": False
+            "allow_cache": False,
+            "seed": seed  # add a seed label
         }
 
     for (key, dgp_fn, method_fn), label in zip(
@@ -143,7 +146,10 @@ if __name__ == "__main__":
         ["np_ridge", "jax_ridge", "jax_ridge_jit"],
     ):
         timings = []
-        for n_sims in [10, 50, 100, 500, 1000, 2000, 5000]:
+        output_file_name = Path(f"example/{label}_timings.csv")
+        if output_file_name.exists():
+            continue
+        for n_sims in [10, 50, 100, 500, 1000]:
             with function_timer() as sim_timer:
                 _, _, _, plots = run_simulations(
                     key,
@@ -153,6 +159,6 @@ if __name__ == "__main__":
                 )
             print(f"{label} simulations (N_sims={n_sims}) took {sim_timer.elapsed_time:.2f} seconds.")
             timings.append({"label": label, "n_sims": n_sims, "elapsed_time": sim_timer.elapsed_time})
-        timings_df = pd.concat(timings)
-        pd.to_csv("example/ridge_example_timings.csv", index=False)
+        timings_df = pd.DataFrame(timings)
+        timings_df.to_csv(f"example/{label}_timings.csv", index=False)
             

@@ -50,7 +50,7 @@ def generate_data(
     ]
     logger.info(f"{len(scenarios)} scenarios generated.")
 
-    for scenario in tqdm.tqdm(scenarios, unit="datasets"):
+    for scenario in tqdm.tqdm(scenarios, unit="datasets", desc="Generating datasets"):
         if scenario.simkey in data_store:
             logger.info(
                 f"Data for scenario {scenario.simkey} already exists; skipping generation."

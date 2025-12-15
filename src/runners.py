@@ -32,6 +32,7 @@ def run_simulations(
     simulation_dir: Union[Path, str, None] = None,
     label=None,
     allow_cache: bool = True,
+    seed: int | None = None,
 ) -> tuple[
     MutableMapping[str, ArrayLike],
     MutableMapping[str, ArrayLike],
@@ -63,7 +64,7 @@ def run_simulations(
             - plots (list): List of generated plots for further modification.
     """
 
-    key_str = key_to_str(prng_key)
+    key_str = key_to_str(prng_key) if seed is None else f"seed={seed}"
 
     try:
         data_gen_key, method_gen_key, evaluator_key = jax.random.split(prng_key, 3)
