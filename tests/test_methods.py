@@ -32,12 +32,12 @@ def np_datasets():
 
 
 @pytest.mark.parametrize(
-    "dataset", ["jax_datasets", "np_datasets"], ids=["jax", "numpy"]
+    "dataset", ["jax_datasets", "np_datasets"], ids=["jax_data", "numpy_data"]
 )
 @pytest.mark.parametrize(
     "method",
     [jax_ridge, np_ridge],
-    ids=["jax_ridge", "numpy_ridge"],
+    ids=["jax_method", "numpy_method"],
 )
 def test_fit_models(dataset, method, request):
     datadict = request.getfixturevalue(dataset)
