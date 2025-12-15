@@ -46,7 +46,7 @@ pip install -r requirements-dev.txt  # for testing tools like pytest
 
 The simulation framework runs in a simple pipeline tied together by function decorators and the central run_simulations orchestrator.
 
-1. Define Components
+## Components 
 
 Define your simulation components using simple decorators from `src.decorators`. The decorator inerface is supported
 for data generating processes, methods, and evaluators. Outputs are automatically named and mapped as inputs to the next step.
@@ -58,7 +58,6 @@ Plotters come from a factory function, `src.plotters.create_plotter_fn`.
 Functions define the data and ground truth parameters.
 
 ```python
-Python
 
 from simtools.decorators import dgp
 import jax.random
@@ -89,9 +88,9 @@ def ols_regression(X, y):
 ```
 
 
-2. Run the Simulation Pipeline
+## Run Simulations
 
-Invoke run_simulations with mappings of functions and their parameter spaces. 
+Invoke `run_simulations` with mappings of functions and their parameter spaces. 
 The system handles parameter combinations, simulation loops, execution, and caching.
 
 
@@ -164,14 +163,23 @@ but this part of the package could use some work.
 
 ## Data Persistence and Caching
 
-The package provides a reliable, "invisible" caching layer by saving intermediate results to disk immediately.
+The package provides a reliable, "invisible" caching layer by saving intermediate results to disk immediately. This is done
+through a subclassing of the `MutableMapping` abstract class, and the corresponding classes are `src.utils.DiskDict` and `src.utils.ImageDict`.
 
-DiskDict: A custom dictionary-like class that serializes and saves items to disk when they are set (e.g., data_store['key'] = data_output).
+To use these, provide a directory upon initialization:
 
-Serialization: Uses the `dill` library for robust serialization of arbitrary Python objects, including code definitions. This ensures reproducibility more effectively than `pickle`
-on average due to the wider array of objects it can handle.
+```python
+DataDict("./simulation_results")
+```
+Note that this is handled automatically for you when you provide a `simulation_dir` to `run_simulations`, and the 
+resulting dictionaries that are passed back from the results of `run_simulations` are `DiskDict` instances.
 
-To access previously generated data, simply point the simulation_dir to a directory containing existing simulation outputs; the data will be loaded directly into memory without recalculation.
+For serialization, the package uses the `dill` library for robust serialization 
+of arbitrary Python objects, including code definitions. This ensures 
+reproducibility more effectively than `pickle` on average due to the wider array of objects it can handle.
+
+To access previously generated data, simply initialize the `DataDict` to a directory containing existing simulation outputs; the data will be loaded directly into memory without recalculation when accessed. Note that by default, `DGPs` are stored in the `/data/` subdirectory, while `Methods` are stored in the `/methods/` subdirectory within the specified `simulation_dir`. When re-using a directory, you'll need
+to specify these subdirectories accordingly, as the filenames become the keys for retrieval.
 
 # Contribution
 
