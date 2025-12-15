@@ -188,10 +188,10 @@ batches, but for larger ones, you face extremely gradual returns to scale.
 
 \subsection{Evaluation}
 
-For now, we have some simplifying API assumptions on the `Evaluator` class and
-`evaluator` decorator, namely that the output of each evaluator is a scalar. 
+For now, we have some simplifying API assumptions on the \code{Evaluator} class and
+\code{evaluator} decorator, namely that the output of each evaluator is a scalar. 
 This is not ideal, nor is it a requirement of the package. Because of \code{JAX}'s
-automatic vectorization in fact, `vmap` can return outputs
+automatic vectorization in fact, \code{vmap} can return outputs
 of arbitrary dimensions, even utilizing tuple collections in Python for
 better organization of results. 
 
@@ -248,16 +248,16 @@ each of 40 configurations, \code{JAX} is able to outperform \code{NumPy}.
 
 More surprisingly, these returns to scale are still realized
 on CPU alone, though the speedup is less pronounced. Using
-my local laptop, I found that \code{JAX} began to outperform \code{NumPy}
+my Macbook Air, I found that \code{JAX} began to outperform \code{NumPy}
 after about 1000 replications of fitting the ridge regression
 models. 
 
-These results are based around fairly
-subpar \code{NumPy} code for fitting ridge regression models, as the \code{NumPy} 
+These results are based around subpar \code{NumPy} code for fitting ridge 
+regression models, as the \code{NumPy} 
 implementation loops over the first index dimension in a list comprehension. 
-Still, for cases when users are writing arbitrary functions that may not be easily vectorizable,
-this package provides a gentle wrapper around \code{JAX} that allows faster
-code execution with fairly minimal setup and Pythonic style.
+Still, for cases when users are writing arbitrary functions that may not be 
+easily vectorizable, this package provides a gentle wrapper around \code{JAX} 
+that allows faster code execution with fairly minimal setup and Pythonic style.
 
 \section{Lessons Learned}
 
@@ -275,7 +275,7 @@ code execution with fairly minimal setup and Pythonic style.
 
 \subsection{Course Impact}
 
-The biggest change from the course was my gradual emphasis on testing and 
+The biggest change from the course was my emphasis on testing and 
 reproducibility. Rigorous adherence to the unit tests prevented me from 
 making breaking changes to the API and forced me to really encode the API from
 the start. Adding the \code{NumPy} functionality only took a couple of 
