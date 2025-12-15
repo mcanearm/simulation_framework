@@ -54,8 +54,13 @@ def run_simulations(
             - plots (list): List of generated plots for further modification.
     """
 
-    data_gen_key, method_gen_key, evaluator_key = jax.random.split(prng_key, 3)
     key_str = key_to_str(prng_key)
+
+    try:
+        data_gen_key, method_gen_key, evaluator_key = jax.random.split(prng_key, 3)
+    except TypeError:
+        # if type error, it's a numpy rng
+        data_gen_key = method_gen_key = evaluator_key = prng_key
 
     if simulation_dir is not None:
         # add n_sims to the output directory to ensure that different simulation sizes do not overwrite

@@ -6,6 +6,8 @@ from pathlib import Path
 from time import time
 import logging
 import jax
+import numpy as np
+from hashlib import md5
 
 import dill
 from jax._src.pjit import JitWrapped
@@ -13,10 +15,12 @@ from jaxtyping import PRNGKeyArray
 
 from src.decorators import MetadataCaller
 from src.decorators import DGP, Method
+from functools import singledispatch
 
 logger = logging.getLogger(__name__)
 
 
+@singledispatch
 def key_to_str(key: PRNGKeyArray) -> str:
     """
     Convert a jax key to a string representation for use in filepaths. Works
@@ -28,6 +32,17 @@ def key_to_str(key: PRNGKeyArray) -> str:
         key_data = jax.random.key_data(key)
         key_param = "-".join([str(i) for i in key_data])
     return f"key={key_param}"
+
+
+@key_to_str.register
+def _np_str_key(key: np.random.Generator, seed: int | None = None):
+    if seed:
+        return f"seed={seed}"
+    else:
+        # Hopefully there are no issues here
+        state = key.bit_generator.state
+        long_int = state["state"]["state"]
+        return f"state_hash={md5(long_int.to_bytes(16)).hexdigest()}"
 
 
 class function_timer(object):

@@ -1,6 +1,7 @@
 import jax
 import pytest
 from jax import numpy as jnp
+import numpy as np
 
 from src.decorators import dgp, method
 
@@ -67,3 +68,22 @@ def exponential_data(prng_key, n=100, p=10, noise=1.0):
     noise = jax.random.normal(prng_key, shape=(n,)) * noise
     y = jnp.exp(X @ true_beta / 10) + noise
     return X, y, true_beta
+
+
+@dgp(output=["X", "y", "beta"], label="NP_OLS")
+def np_ols(rng, n=100, p=10):
+    X = rng.normal(size=(n, p))
+    true_beta = np.arange(1, p + 1)
+    noise = rng.normal(size=n) * 0.5
+    y = X @ true_beta + noise
+    return X, y, true_beta
+
+
+@method(output="beta_hat", label="RidgeNP")
+def np_ridge(X, y, alpha=0.1):
+    """
+    test docstring
+    """
+    p = X.shape[1]
+    beta_hat = np.linalg.inv(X.T @ X + alpha * jnp.eye(p)) @ X.T @ y
+    return beta_hat
