@@ -1,8 +1,13 @@
-from jax._src.pjit import JitWrapped
-import jax.typing
-import jax
-from pathlib import Path
 from collections.abc import MutableMapping
+from pathlib import Path
+from typing import Union
+
+import jax
+import jax.typing
+import numpy as np
+import tqdm
+from jax._src.pjit import JitWrapped
+
 from src.decorators import Method
 from src.utils import (
     DiskDict,
@@ -10,9 +15,6 @@ from src.utils import (
     create_vmap_signature,
     generate_scenarios,
 )
-from typing import Union
-import tqdm
-import numpy as np
 
 
 def _execute(method_fn, method_input_args, method_kwargs, prng_key=None):
@@ -78,6 +80,7 @@ def fit_methods(
     data_dict: MutableMapping,
     simulation_dir: Union[Path, str, None] = None,
     prng_key=None,
+    allow_cache: bool = True,
 ) -> MutableMapping[str, jax.typing.ArrayLike]:
     """
     Fit methods over generated data outputs.
@@ -100,7 +103,7 @@ def fit_methods(
         # add n_sims to the output directory to ensure that different simulation sizes do not overwrite
         # each other from run to run
         output_dir = Path(simulation_dir)
-        method_store = DiskDict(output_dir / "methods")
+        method_store = DiskDict(output_dir / "methods", allow_cache=allow_cache)
     else:
         # use a plain dictionary if no data directory is provided
         method_store = dict()
@@ -110,41 +113,39 @@ def fit_methods(
         for method_fn, param_set in model_mapping
         for scenario in generate_scenarios(method_fn, param_set)
     ]
-    for data_key, dgp_output in tqdm.tqdm(
-        data_dict.items(), position=0, unit="datasets"
-    ):
-        for method_scenario in tqdm.tqdm(
-            method_scenarios, position=1, leave=False, unit="methods"
-        ):
-            result_simkey = data_key + "__" + method_scenario.simkey
-            if result_simkey in method_store:
-                continue
+    tqdm_len = len(data_dict) * len(method_scenarios)
+    with tqdm.tqdm(total=tqdm_len, desc="Fitting methods", unit="scenario") as pbar:
+        for data_key, dgp_output in data_dict.items():
+            for method_scenario in method_scenarios:
+                result_simkey = data_key + "__" + method_scenario.simkey
+                if result_simkey in method_store:
+                    continue
 
-            method_fn, method_kwargs = method_scenario
+                method_fn, method_kwargs = method_scenario
 
-            method_input_args = {
-                arg: getattr(dgp_output, arg)
-                for arg in dgp_output._fields
-                if any([arg in in_arg for in_arg in method_fn.sig.parameters])
-            }
+                method_input_args = {
+                    arg: getattr(dgp_output, arg)
+                    for arg in dgp_output._fields
+                    if any([arg in in_arg for in_arg in method_fn.sig.parameters])
+                }
 
-            if method_fn._requires_key:
-                try:
-                    # split the provided key and overwrite it for the next method
-                    # if one is required
-                    method_fit_key, prng_key = jax.random.split(method_fit_key, 2)
-                # TODO: modify to be real exception later
-                # if attributeError, this is a numpy RNG style and we keep going
-                except TypeError:
-                    pass
-                except Exception as e:
-                    raise ValueError(
-                        "A valid PRNG key must be provided to fit_models if any method requires a key."
-                    ) from e
+                if method_fn._requires_key:
+                    try:
+                        # split the provided key and overwrite it for the next method
+                        # if one is required
+                        method_fit_key, prng_key = jax.random.split(method_fit_key, 2)
+                    except TypeError:
+                        # if attributeError, this is a numpy RNG style and we keep going
+                        pass
+                    except Exception as e:
+                        raise ValueError(
+                            "A valid PRNG key must be provided to fit_models if any method requires a key."
+                        ) from e
 
-            method_output = _execute(
-                method_fn, method_input_args, method_kwargs, method_fit_key
-            )
-            method_store[result_simkey] = method_output
+                method_output = _execute(
+                    method_fn, method_input_args, method_kwargs, method_fit_key
+                )
+                method_store[result_simkey] = method_output
+                pbar.update(1)
 
     return method_store

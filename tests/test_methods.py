@@ -1,8 +1,9 @@
+import numpy as np
 import pytest
-from tests.conftest import ridge, ols_data, np_ols, np_ridge
+
+from example.ridge_example import jax_ridge, linear_data_jax, linear_data_np, np_ridge
 from src.dgp import generate_data
 from src.methods import fit_methods
-import numpy as np
 
 
 # TODO: it seems like a problem that I have to share n_sims across the entire chain; shouldn't
@@ -12,7 +13,7 @@ def jax_datasets(key):
     return generate_data(
         key,
         [
-            (ols_data, {"p": [5, 10], "n": [50, 100]}),
+            (linear_data_jax, {"p": [5, 10], "n": [50, 100]}),
         ],
         n_sims=100,
     )
@@ -24,19 +25,19 @@ def np_datasets():
     return generate_data(
         rng,
         [
-            (np_ols, {"p": [5, 10], "n": [50, 100]}),
+            (linear_data_np, {"p": [5, 10], "n": [50, 100]}),
         ],
         n_sims=100,
     )
 
 
 @pytest.mark.parametrize(
-    "dataset", ["jax_datasets", "np_datasets"], ids=["jax", "numpy"]
+    "dataset", ["jax_datasets", "np_datasets"], ids=["jax_data", "numpy_data"]
 )
 @pytest.mark.parametrize(
     "method",
-    [ridge, np_ridge],
-    ids=["jax_ridge", "numpy_ridge"],
+    [jax_ridge, np_ridge],
+    ids=["jax_method", "numpy_method"],
 )
 def test_fit_models(dataset, method, request):
     datadict = request.getfixturevalue(dataset)

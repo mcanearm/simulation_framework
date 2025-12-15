@@ -1,14 +1,15 @@
-from src.decorators import evaluator, Evaluator
-from jax import numpy as jnp
+import warnings
 from collections.abc import MutableMapping
+from itertools import product
+from pathlib import Path
+from typing import NamedTuple
+
 import jax
 import pandas as pd
-from typing import NamedTuple
-from pathlib import Path
-from itertools import product
-from src.utils import get_params_from_scenario_keystring
+from jax import numpy as jnp
 
-import warnings
+from src.decorators import Evaluator, evaluator
+from src.utils import get_params_from_scenario_keystring
 
 
 @evaluator(output="rmse")

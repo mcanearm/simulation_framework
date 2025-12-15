@@ -1,11 +1,12 @@
-import pytest
 from collections.abc import MutableMapping
+
+import pandas as pd
+import pytest
 from jax import numpy as jnp
 
+from example.ridge_example import jax_ols, jax_ridge, linear_data_jax
+from src.evaluators import bias, rmse
 from src.runners import run_simulations
-from src.evaluators import rmse, bias
-from tests.conftest import ols_data, ridge, ols
-import pandas as pd
 
 
 def test_sim_repeat(key, tmpdir):
@@ -13,9 +14,9 @@ def test_sim_repeat(key, tmpdir):
     second_simulation_dir = tmpdir / "sim2"
 
     data_gen = [
-        (ols_data, {"n": 50, "p": 5, "dist": ["normal", "t"]}),
+        (linear_data_jax, {"n": 50, "p": 5, "dist": ["normal", "t"]}),
     ]
-    method_fit = [(ridge, {"alpha": [0.1, 1.0]}), (ols, {})]
+    method_fit = [(jax_ridge, {"alpha": [0.1, 1.0]}), (jax_ols, {})]
 
     evaluators = [rmse, bias]
 

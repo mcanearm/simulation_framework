@@ -1,11 +1,18 @@
-from matplotlib import pyplot as plt
+import matplotlib as mpl
 import pandas as pd
-import seaborn as sns
-from pathlib import Path
+from matplotlib import pyplot as plt
+
+# note - this prevents the splots from rendering to screen
+mpl.use("Agg")  # 'Agg'
+
 import logging
+from pathlib import Path
+from typing import Callable, Union
 
-from typing import Union
+import seaborn as sns
 
+from src.decorators import Evaluator
+from src.utils import ImageDict
 
 logger = logging.getLogger(__name__)
 
@@ -13,9 +20,9 @@ logger = logging.getLogger(__name__)
 def create_plotter_fn(
     plot_class,
     x: str,
-    y: str,
     title=None,
     param_filters: dict | None = None,
+    log_scale=False,  # should be a more elegant way to do this
     **facet_grid_params,
 ):
     """
@@ -43,15 +50,15 @@ def create_plotter_fn(
         function: A plotting function that takes evaluation_data and an optional simulation_dir.
     """
 
-    def _drawer(
-        evaluation_data: pd.DataFrame, simulation_dir: Union[str, Path, None] = None
-    ):
+    def _drawer(evaluation_data: pd.DataFrame, target: str, evaluation_metric: str):
         # TODO: Decide whether this really needs to be here.
         """
         Thin wrapper around seaborn's FacetGrid to plot lineplots across multiple facets. This is not strictly required, and
         arguably, it would just be easier if end users called seaborn directly.
         """
         data: pd.DataFrame = evaluation_data.copy()
+
+        data = data[data["target"] == target]  # type: ignore
         if param_filters:
             # Gemini generated
             # Initialize a boolean series where all rows are True
@@ -87,17 +94,59 @@ def create_plotter_fn(
             return  # Exit the drawer function early
 
         # End Gemini generation
-
         grid = sns.FacetGrid(data, **facet_grid_params)
-        grid.map_dataframe(plot_class, x=x, y=y)
+        grid.map_dataframe(plot_class, x=x, y=evaluation_metric)
+        grid.set_axis_labels(x, evaluation_metric)
         grid.add_legend()
+
+        if log_scale:
+            grid.set(yscale="log")
 
         if title:
             plt.suptitle(title)
-        if simulation_dir is not None:
-            fig_dir = Path(simulation_dir) / "plots"
-            fig_dir.mkdir(parents=True, exist_ok=True)
-            save_path = fig_dir / f"{plot_class.__name__}_{x}_vs_{y}.png"
-            plt.savefig(save_path)
+
+        fig_key = f"{evaluation_metric}_{target}_{x}_vs_{evaluation_metric}.png"
+
+        # return the figure and a filename key to save it
+        return grid, fig_key
 
     return _drawer
+
+
+def plot_results(
+    evaluation_data: pd.DataFrame,
+    plot_mapping: list[tuple[Evaluator, Callable]] | tuple[Evaluator, Callable],
+    targets: str | list[str],
+    simulation_dir: Union[str, Path, None] = None,
+) -> list:
+    """
+    Create plots from evaluation data using provided plotter functions.
+
+    Args:
+        evaluation_data (pd.DataFrame): DataFrame containing evaluation results.
+        plotters (object | list[object] | None): Plotter function(s) to create visualizations. Defaults to None.
+        simulation_dir (Union[str, Path, None]): Directory to save plots. Defaults to None.
+
+    Returns:
+        list: List of generated plots for further modification.
+    """
+    if not isinstance(plot_mapping, list):
+        plot_mapping = [plot_mapping]
+
+    if simulation_dir is not None:
+        simulation_dir = Path(simulation_dir)
+        plots = ImageDict(simulation_dir / "plots")
+    else:
+        plots = {}
+
+    for target in targets:
+        for evaluator_fn, plt_fns in plot_mapping:
+            if not isinstance(plt_fns, list):
+                plt_fns = [plt_fns]
+            for plotter in plt_fns:
+                output_plot, plot_key = plotter(
+                    evaluation_data, target, evaluator_fn.label
+                )
+            plots[plot_key] = output_plot
+
+    return plots

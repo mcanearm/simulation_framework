@@ -1,6 +1,14 @@
-from jax._src.pjit import JitWrapped
-import numpy as np
+import logging
+from collections.abc import MutableMapping
+from functools import singledispatch
+from pathlib import Path
 from typing import Union
+
+import jax
+import numpy as np
+import tqdm
+from jax._src.pjit import JitWrapped
+
 from src.decorators import DGP
 from src.utils import (
     DiskDict,
@@ -8,13 +16,6 @@ from src.utils import (
     create_vmap_signature,
     generate_scenarios,
 )
-from collections.abc import MutableMapping
-from pathlib import Path
-import jax
-import tqdm
-import logging
-
-from functools import singledispatch
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +27,16 @@ def generate_data(
     n_sims: int,
     simulation_dir: Union[str, Path, None] = None,
     sequential_params: bool = False,
+    allow_cache: bool = True,
 ) -> Union[MutableMapping[str, jax.typing.ArrayLike], dict]:
     data_gen_key = prng_key
     if simulation_dir is not None:
         # add n_sims to the output directory to ensure that different simulation sizes do not overwrite
         # each other from run to run
         output_dir = Path(simulation_dir)
-        data_store = DiskDict(output_dir / "data")  # creates dir if it doesn't exist
+        data_store = DiskDict(
+            output_dir / "data", allow_cache=allow_cache
+        )  # creates dir if it doesn't exist
     else:
         # use a plain dictionary if no data directory is provided
         data_store = dict()
@@ -49,7 +53,7 @@ def generate_data(
     ]
     logger.info(f"{len(scenarios)} scenarios generated.")
 
-    for scenario in tqdm.tqdm(scenarios, unit="datasets"):
+    for scenario in tqdm.tqdm(scenarios, unit="datasets", desc="Generating datasets"):
         if scenario.simkey in data_store:
             logger.info(
                 f"Data for scenario {scenario.simkey} already exists; skipping generation."
@@ -58,8 +62,8 @@ def generate_data(
 
         try:
             data_gen_key, _ = jax.random.split(prng_key, 2)
-        # if attributeError, this is a numpy RNG style and we keep going
         except TypeError:
+            # if TypeError, this is a numpy RNG style and we keep going
             pass
 
         dgp_fn, dgp_args = scenario
