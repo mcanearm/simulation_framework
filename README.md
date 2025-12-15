@@ -44,11 +44,36 @@ pip install -r requirements.txt
 pip install -r requirements-dev.txt  # for testing tools like pytest
 ```
 
-The simulation framework runs in a simple pipeline tied together by function decorators and the central run_simulations orchestrator.
+I've also included a Makefile, but it's pretty basic and I don't think fully necessary.
+Contents are:
+
+```makefile
+test:
+	@echo "Running tests..."
+	PYTHONPATH=. pytest tests
+	@echo "Tests completed."
+	
+sim_example:
+	@echo "Running example script..."
+	PYTHONPATH=. python ./example/ridge_example.py
+	@echo "Example script completed."
+	
+setup_env:
+	@echo "Setting up the environment..."
+	pip install -r requirements-dev.txt
+	@echo "Environment setup completed."
+	
+uv_setup:
+	@echo "Setting up the enviroment using uv..."
+	uv sync --extra dev
+	@echo "Environment setup complete."
+```
+
 
 ## Components 
 
-Define your simulation components using simple decorators from `src.decorators`. The decorator inerface is supported
+The simulation framework runs in a simple pipeline tied together by function decorators and the central run_simulations orchestrator.
+You define your simulation components using simple decorators from `src.decorators`. The decorator inerface is supported
 for data generating processes, methods, and evaluators. Outputs are automatically named and mapped as inputs to the next step.
 
 Plotters come from a factory function, `src.plotters.create_plotter_fn`. 
@@ -86,6 +111,25 @@ def ols_regression(X, y):
     beta_hat = jnp.linalg.inv(X.T @ X) @ X.T @ y
     return beta_hat
 ```
+
+## Evaluators
+
+Functions define evaluation metrics comparing method outputs to ground truth. 
+Essentially, the decorator interface here just says what the name of the output
+will be in the output `DataFrame`.
+
+```python
+from jax import numpy as jnp
+
+# Surprisingly, this works with numpy arrays as well
+@evaluator(output="rmse")
+def rmse(true, predicted):
+    """
+    Standard RMSE evaluator.
+    """
+    return jnp.sqrt(jnp.mean((true - predicted) ** 2))
+```
+
 
 
 ## Run Simulations
@@ -152,14 +196,14 @@ JAX Backend (Recommended): The system automatically wraps your DGP and Method fu
 
 While JAX has compilation overhead, timing results show that for simulation studies involving medium-to-large Nsims (e.g., >100-1000 replications), the speedup gained from JAX's vectorization overcomes the overhead. This depends a lot on your platform.
 
-![JAX vs NumPy Timing Comparison](docs/simulation_timings.png)
+![JAX vs NumPy Timing Comparison](docs/report/images/simulation_timings.png)
 
 ## Plotting
 
 The package includes a flexible plotting system that allows users to define custom plotters based on evaluation metrics, but is in early development and may not be fully featured. The plots are titled and labelled automatically based on the simulation parameters,
 but this part of the package could use some work.
 
-![RMSE Plot](./docs/rmse_beta_alpha_vs_rmse.png)
+![RMSE Plot](./docs/report/images/rmse_beta_alpha_vs_rmse.png)
 
 ## Data Persistence and Caching
 

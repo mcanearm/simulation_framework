@@ -62,7 +62,7 @@ to handle this, but Python lacks similar tools. This package aims to fill that
 gap in a Pythonic manner. 
 
 The main beneficiaries of the package are users who are conducting simulation
-studies in JAX. Most of the package's special implementations are built
+studies in \code{JAX}. Most of the package's special implementations are built
 around this framework, though users may supply \code{NumPy} functions. However,
 these functions generally won't benefit from exceptional speedup
 under this version of the package, for reasons that will explored a bit later.
@@ -170,7 +170,7 @@ iterating over the leading index. This is done through simple assumptions:
     \item All other arguments are copied across batches.
 \end{enumerate}
 
-Therefore, we use a simple function generate the appropriate \code{in\_args} argument
+Therefore, we use a simple function to generate the appropriate \code{in\_args} argument
 for \code{jax.vmap} that consists of a tuple of \code{0}'s and \code{None}'s that indicate
 which arguments should be vectorized over the leading index. This surprisingly
 powerful abstraction is unfortunately not available in \code{NumPy} to the
@@ -181,7 +181,7 @@ For example, the data-generating process above could be easily written in
 \code{NumPy} to simply generate a single, 3D array of shape \code{(n\_sims, n, p)},
 but looping over the method fitting may still be unavoiable for arbitrary functions.
 
-The reality of JAX is that, at some level, you can get higher performance code
+The reality of \code{JAX} is that, at some level, you can get higher performance code
 that is, if not sloppier, perhaps less elegant in an approach. You can write a
 straightforward loop that iterates over replications that is slow for smaller 
 batches, but for larger ones, you face extremely gradual returns to scale.
@@ -190,7 +190,7 @@ batches, but for larger ones, you face extremely gradual returns to scale.
 
 For now, we have some simplifying API assumptions on the `Evaluator` class and
 `evaluator` decorator, namely that the output of each evaluator is a scalar. 
-This is not ideal, nor is it a requirement of the package. Because of JAX's
+This is not ideal, nor is it a requirement of the package. Because of \code{JAX}'s
 automatic vectorization in fact, `vmap` can return outputs
 of arbitrary dimensions, even utilizing tuple collections in Python for
 better organization of results. 
@@ -248,15 +248,15 @@ each of 40 configurations, \code{JAX} is able to outperform \code{NumPy}.
 
 More surprisingly, these returns to scale are still realized
 on CPU alone, though the speedup is less pronounced. Using
-my local laptop, I found that `JAX` began to outperform `NumPy`
+my local laptop, I found that \code{JAX} began to outperform \code{NumPy}
 after about 1000 replications of fitting the ridge regression
 models. 
 
 These results are based around fairly
-subpar `NumPy` code for fitting ridge regression models, as the \code{NumPy} 
+subpar \code{NumPy} code for fitting ridge regression models, as the \code{NumPy} 
 implementation loops over the first index dimension in a list comprehension. 
 Still, for cases when users are writing arbitrary functions that may not be easily vectorizable,
-this package provides a gentle wrapper around `JAX` that allows faster
+this package provides a gentle wrapper around \code{JAX} that allows faster
 code execution with fairly minimal setup and Pythonic style.
 
 \section{Lessons Learned}
@@ -278,7 +278,7 @@ code execution with fairly minimal setup and Pythonic style.
 The biggest change from the course was my gradual emphasis on testing and 
 reproducibility. Rigorous adherence to the unit tests prevented me from 
 making breaking changes to the API and forced me to really encode the API from
-the start. Adding the `NumPy` functionality only took a couple of 
+the start. Adding the \code{NumPy} functionality only took a couple of 
 hours because of this emphasis.
 
 Next was an emphasis on modularity. Generally in statistics courses I have let 

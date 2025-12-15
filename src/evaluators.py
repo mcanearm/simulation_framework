@@ -13,36 +13,36 @@ from src.utils import get_params_from_scenario_keystring
 
 
 @evaluator(output="rmse")
-def rmse(true, target):
+def rmse(true, predicted):
     """
     Standard RMSE evaluator.
     """
-    return jnp.sqrt(jnp.mean((true - target) ** 2))
+    return jnp.sqrt(jnp.mean((true - predicted) ** 2))
 
 
 @evaluator(output="bias")
-def bias(true, target):
+def bias(true, predicted):
     """
     Standard bias function.
     """
-    return jnp.mean(target - true)
+    return jnp.mean(predicted - true)
 
 
 @evaluator(output="mae")
-def mae(true, target):
+def mae(true, predicted):
     """
     Standard MAE function.
     """
-    return jnp.mean(jnp.abs(target - true))
+    return jnp.mean(jnp.abs(predicted - true))
 
 
 @evaluator(output="coverage", label="Coverage")
-def coverage(true, target, sd, alpha=0.95):
+def coverage(true, predicted, sd, alpha=0.95):
     """
     Calculate coverage based on assumed normal confidence intervals.
     """
-    low = target - sd * jax.scipy.stats.norm.ppf(1 - alpha / 2)
-    high = target + sd * jax.scipy.stats.norm.ppf(1 - alpha / 2)
+    low = predicted - sd * jax.scipy.stats.norm.ppf(1 - alpha / 2)
+    high = predicted + sd * jax.scipy.stats.norm.ppf(1 - alpha / 2)
     return jnp.mean((true >= low) & (true <= high))
 
 
