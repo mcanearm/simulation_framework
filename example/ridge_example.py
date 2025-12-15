@@ -1,14 +1,14 @@
 import jax
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from jax import numpy as jnp
 
-import seaborn as sns
 from src.decorators import dgp, method
 from src.evaluators import bias, rmse
+from src.plotters import create_plotter_fn
 from src.runners import run_simulations
 from src.utils import function_timer
-from src.plotters import create_plotter_fn
 
 
 @method(output="beta_hat", label="Ridge")
